@@ -92,7 +92,7 @@ Quando todos os itens passaram (ou foram explicitamente pulados):
 1. Mostre a **matriz de prioridade** como tabela ordenada por severidade decrescente: `ID · Polaridade · Enunciado (curto) · P · I · Sev · Faixa · Qualidade · Origem da nota`. Abaixo, uma linha de contagem (🔴 n · 🟡 n · 🟢 n · não priorizados n) e a lista dos itens **Investigue**, se houver.
 2. Diga, em uma linha, quantos itens ficaram com nota `ia-aceito` sem ajuste — se forem muitos, pergunte se a pessoa quer rever algum antes de seguir. Uma pergunta.
 3. Garanta `etapa: 3` no arquivo, gere `registro.md` conforme `references/sessao.md` (agora com a seção de priorização).
-4. Diga os dois caminhos e que as Etapas 4–5 (Responder, Registrar) ainda não estão nesta skill — o registro está salvo e será retomado de onde parou. Lembre em uma linha: item 🔴 vai exigir resposta com dono e gatilho; item Investigue, reduzir a incerteza antes.
+4. Diga os dois caminhos e anuncie a Etapa 4 — Responder — em uma frase: agora a pergunta é "o que fazer com cada risco, e quem assina?"; item 🔴 vai exigir resposta com dono e gatilho; item Investigue, reduzir a incerteza antes. Carregue `references/etapa-4-responder.md`.
 
 ## Nunca
 

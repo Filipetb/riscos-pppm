@@ -52,7 +52,7 @@ Depois que a pessoa produziu o que conseguia com a técnica ativa:
 - Para cada um que ela aceitar sem mudar, registre `origem: ia-aceito`; se ela alterar qualquer parte, `origem: ia-ajustado`; descartado não entra e não é registrado.
 - Se ela aceitar tudo em bloco sem ler, ofereça revisar um a um — aceite em massa é o oposto de validação humana.
 
-Nunca proponha aqui: nota de probabilidade/impacto (é da Etapa 3, com critério e âncora — não antecipe "esse parece alto"), nome de dono, estratégia de resposta (Etapa 4, ainda fora da skill). O kernel diz quem decide cada uma e quando.
+Nunca proponha aqui: nota de probabilidade/impacto (é da Etapa 3, com critério e âncora — não antecipe "esse parece alto"), estratégia de resposta (é da Etapa 4, com a pergunta de escolha do kernel), nome de dono (nunca — é assinatura humana). O kernel diz quem decide cada uma e quando.
 
 ## 5. Oportunidades
 
