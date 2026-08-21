@@ -4,7 +4,9 @@
 
 Uma sessão guiada que leva você de "não sei quais são meus riscos" a um registro de riscos exportado, em cerca de 15 minutos. Feito para quem gerencia projetos, programas e portfólios — não para quem programa.
 
-> ⚠️ **Em construção.** O método (`metodo/`) está completo. As duas interfaces estão sendo implementadas.
+**➤ [Abrir a sessão de riscos](https://filipetb.github.io/riscos-pppm/)** — roda no navegador, offline, sem instalar nada.
+
+> O método (`metodo/`) e a interface web (`docs/index.html`) estão prontos. A skill do Claude Code ainda está sendo implementada.
 
 ---
 
@@ -16,9 +18,11 @@ Este projeto empacota as técnicas de identificação do PMBOK em perguntas conc
 
 ## Como usar
 
-**Pelo navegador** — abra a página publicada, ou baixe `docs/index.html` e dê duplo clique. Funciona offline, sem instalação, sem conta.
+**Pelo navegador** — abra <https://filipetb.github.io/riscos-pppm/>. Para usar offline, baixe o arquivo por [este link direto](https://raw.githubusercontent.com/Filipetb/riscos-pppm/main/docs/index.html) (clique com o botão direito → *Salvar link como…*) e dê duplo clique nele. Um arquivo só: sem build, sem servidor, sem conta.
 
-**No Claude Code** — clone o repositório e rode a skill `/riscos`. Mesmo método, com elicitação conversacional em vez de formulário.
+A sessão guiada vai de Enquadrar a Registrar em cinco etapas, bloqueia o encerramento de item sem dono, e exporta o registro em CSV e em Markdown. A sessão fica no `localStorage` do seu navegador — recarregar a página não perde o trabalho.
+
+**No Claude Code** *(em construção)* — clonar o repositório e rodar a skill `/riscos`. Mesmo método, com elicitação conversacional em vez de formulário.
 
 Ambos produzem o mesmo registro, com os mesmos campos e as mesmas fórmulas, porque leem o mesmo kernel.
 
@@ -53,12 +57,24 @@ O método é a única fonte de verdade. As interfaces consomem e nunca redefinem
 
 ### Duas réguas, não uma
 
-| | Régua A · Probabilidade × Impacto | Régua B · fórmula executiva |
+| | Régua A · Probabilidade × Impacto | Régua B · fórmula da Aula 2 |
 |---|---|---|
 | Prioriza | Riscos | Iniciativas e respostas |
 | Responde | "Qual risco olhar primeiro?" | "Qual ação implementar primeiro?" |
 
-Confundir as duas é o erro conceitual mais comum em matriz de risco. A ferramenta as mantém separadas.
+Confundir as duas é o erro conceitual mais comum em matriz de risco. A ferramenta as mantém separadas — nunca na mesma tela, nunca somadas.
+
+### O autoteste no rodapé
+
+A página roda a própria suíte de testes **a cada carregamento**, antes de desenhar qualquer coisa, e mostra o resultado no rodapé: `método verificado ✓` em verde, ou uma faixa vermelha no topo listando o que falhou.
+
+Isso não é enfeite. A versão em PDF da Aula 2 diverge da própria fórmula em 9 de 9 casos, porque aritmética manual em matriz de priorização erra com facilidade — calcular de forma consistente é justamente o que a ferramenta automatiza. O selo demonstra esse argumento em vez de só afirmá-lo: ele reproduz os casos de verificação da aula (89 / 82 / 79), as fronteiras das duas réguas, o parser do catálogo, o corte obrigatório de dono e o formato do registro exportado.
+
+O que o autoteste **não** faz é ler a pasta `metodo/` — os dois lados da comparação estão dentro do HTML. Quem atesta a paridade entre o método e o app é [`scripts/verificar-kernel.py`](scripts/verificar-kernel.py):
+
+```bash
+python3 scripts/verificar-kernel.py
+```
 
 ### O corte obrigatório
 
@@ -68,7 +84,7 @@ Item sem uma pessoa nomeada não pode ser encerrado. Aparece numa seção `Pende
 
 ## Roadmap
 
-- [ ] Interface web (`docs/index.html`)
+- [x] Interface web (`docs/index.html`) — sessão guiada em cinco etapas, corte obrigatório de HITL e exportação em CSV/Markdown
 - [ ] Skill Claude Code
 - [ ] Análise quantitativa — VME, reserva de contingência
 - [ ] Monitoramento — reavaliação periódica, análise de reservas
@@ -77,7 +93,30 @@ Item sem uma pessoa nomeada não pode ser encerrado. Aparece numa seção `Pende
 
 ## Contribuindo
 
-O método é editável por quem não programa. Para propor uma técnica de identificação, abra um PR acrescentando uma linha a `metodo/tecnicas.csv` com a técnica, a origem no PMBOK e a pergunta de disparo. O esquema está documentado em [`tecnicas-identificacao.md`](metodo/tecnicas-identificacao.md).
+O método é editável por quem não programa. Para propor uma técnica de identificação, acrescente uma linha a [`metodo/tecnicas.csv`](metodo/tecnicas.csv) com a técnica, a origem no PMBOK e a pergunta de disparo. O esquema está documentado em [`tecnicas-identificacao.md`](metodo/tecnicas-identificacao.md).
+
+**Há um segundo passo, e ele é obrigatório.** A página web não faz nenhuma requisição de rede — é isso que a deixa funcionar por duplo clique e offline. Como consequência, ela não lê `metodo/tecnicas.csv`: carrega uma **cópia embutida** do arquivo, dentro de um bloco `<script type="text/csv">` no `docs/index.html`. Editar só o kernel não muda o app.
+
+Depois de editar o CSV, sincronize a cópia e confira:
+
+```bash
+# 1. substitua o bloco embutido pelo conteúdo atual do CSV
+python3 - <<'EOF'
+import io, re
+csv = io.open('metodo/tecnicas.csv', encoding='utf-8').read()
+html = io.open('docs/index.html', encoding='utf-8').read()
+html = re.sub(r'(<script type="text/csv" id="tecnicas-csv">\n).*?(</script>)',
+              lambda m: m.group(1) + csv + m.group(2), html, count=1, flags=re.S)
+io.open('docs/index.html', 'w', encoding='utf-8').write(html)
+EOF
+
+# 2. confirme que kernel e app dizem a mesma coisa
+python3 scripts/verificar-kernel.py
+```
+
+O script compara byte a byte a cópia embutida com o original, e também confere as faixas das duas réguas, os pesos, os nomes das dez estratégias e os seis gatilhos de validação humana. Ele sai com erro na primeira divergência — **o kernel é a fonte de verdade; o app se ajusta a ele, nunca o contrário.**
+
+O mesmo vale para qualquer edição em `metodo/*.md`: rode o script antes de abrir o PR.
 
 ## Créditos
 

@@ -1,14 +1,3626 @@
 <!doctype html>
+<html lang="pt-BR">
+<head>
 <meta charset="utf-8">
-<title>riscos-pppm</title>
+<title>riscos-pppm — sessão de riscos</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Sessão guiada de gestão de riscos de projeto. Método PPPM/BSBr + PMBOK. Offline, sem instalação, sem que nenhum dado saia da sua máquina.">
+<!-- Ícone embutido como data: URI. Não é recurso externo: existe só para que o navegador não
+     dispare uma requisição automática de /favicon.ico e o painel Network fique de fato vazio. -->
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAQUlEQVR42mOQjfEhCTEMUQ3///8nQcN/MCBWA5pqFA1oElhVo2tAlsaqGt1JcEW4VGPxw38YICFY8agewkkDGQEA+97xYUcvhm4AAAAASUVORK5CYII=">
 <style>
-  :root { color-scheme: light dark; }
-  body { font: 16px/1.6 system-ui, sans-serif; max-width: 34rem; margin: 18vh auto; padding: 0 1.5rem; }
-  code { background: color-mix(in srgb, currentColor 12%, transparent); padding: .15em .4em; border-radius: .3em; }
-  a { color: inherit; }
+:root{
+  color-scheme: light dark;
+  --bg:#f6f6f3; --painel:#ffffff; --painel2:#fbfbf9;
+  --ink:#1b1c1a; --muted:#66675f; --line:#e2e2db; --line2:#cbcbc2;
+  --acc:#1d5c4c; --acc-ink:#ffffff; --acc-soft:#e6f1ed;
+  --alto:#a8231c; --alto-bg:#fbeceb;
+  --medio:#7d5600; --medio-bg:#fcf3df;
+  --baixo:#1c6337; --baixo-bg:#e8f4ec;
+  --aviso:#7d4500; --aviso-bg:#fdf0e3;
+  --erro:#a8231c; --erro-bg:#fbeceb;
+  --r:10px;
+  --sombra:0 1px 2px rgba(0,0,0,.05),0 1px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121312; --painel:#1b1d1c; --painel2:#202322;
+    --ink:#e9e9e3; --muted:#9c9d94; --line:#2d302e; --line2:#404441;
+    --acc:#63d0af; --acc-ink:#08130f; --acc-soft:#16302a;
+    --alto:#ff8f86; --alto-bg:#3a1f1d;
+    --medio:#e8bd68; --medio-bg:#332810;
+    --baixo:#7fd39b; --baixo-bg:#122b1b;
+    --aviso:#f0b071; --aviso-bg:#33230f;
+    --erro:#ff8f86; --erro-bg:#3a1f1d;
+    --sombra:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+/* display de classe (flex/grid) vence o display:none do UA para [hidden]; reforçar */
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+h1,h2,h3,h4{line-height:1.25;margin:0 0 .4em}
+h1{font-size:1.25rem;letter-spacing:-.01em}
+h2{font-size:1.15rem;letter-spacing:-.01em}
+h3{font-size:1rem}
+h4{font-size:.9rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p{margin:0 0 .8em}
+ul,ol{margin:0 0 .8em;padding-left:1.2em}
+li{margin:.2em 0}
+a{color:var(--acc)}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:var(--acc-soft);padding:.1em .35em;border-radius:.3em}
+small{font-size:.82rem}
+hr{border:0;border-top:1px solid var(--line);margin:1.2rem 0}
+
+.envelope{max-width:66rem;margin:0 auto;padding:0 1rem 3rem}
+
+/* faixa de erro do autoteste */
+.faixa-erro{background:var(--erro-bg);color:var(--erro);border-bottom:2px solid var(--erro);padding:.9rem 1rem;font-weight:600}
+.faixa-erro ul{font-weight:400;margin:.5em 0 0}
+.faixa-erro[hidden]{display:none}
+.faixa-aviso{background:var(--aviso-bg);color:var(--aviso);border-bottom:2px solid var(--aviso);padding:.9rem 1rem;font-size:.9rem}
+.faixa-aviso b{font-weight:700}
+
+/* topo */
+.topo{border-bottom:1px solid var(--line);background:var(--painel);position:sticky;top:0;z-index:20;box-shadow:var(--sombra)}
+.topo-linha{display:flex;flex-wrap:wrap;gap:.8rem;align-items:flex-start;justify-content:space-between;padding:.9rem 0 .6rem}
+.topo .sub{margin:0;color:var(--muted);font-size:.85rem;max-width:46ch}
+.topo-acoes{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+
+/* passos */
+.passos{display:flex;gap:.35rem;overflow-x:auto;padding:0 0 .7rem;scrollbar-width:thin}
+.passo{
+  flex:0 0 auto;display:flex;align-items:center;gap:.45rem;
+  background:var(--painel2);border:1px solid var(--line);color:var(--ink);
+  border-radius:999px;padding:.38rem .8rem;font:inherit;font-size:.85rem;cursor:pointer;white-space:nowrap
+}
+.passo:hover:not(:disabled){border-color:var(--line2)}
+.passo[aria-current="step"]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.passo:disabled{opacity:.45;cursor:not-allowed}
+.passo .n{display:inline-grid;place-items:center;width:1.35em;height:1.35em;border-radius:50%;background:var(--line);color:var(--ink);font-size:.78em;font-weight:700}
+.passo[aria-current="step"] .n{background:var(--acc-ink);color:var(--acc)}
+
+/* painel */
+.painel{padding-top:1.4rem}
+.bloco{background:var(--painel);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.1rem;margin:0 0 1rem;box-shadow:var(--sombra)}
+.bloco-quieto{background:var(--painel2);box-shadow:none}
+.cabeca-etapa{margin-bottom:1rem}
+.cabeca-etapa .kicker{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);font-weight:700;margin:0 0 .2em}
+.cabeca-etapa p{color:var(--muted);margin:0;max-width:72ch;font-size:.92rem}
+
+/* formulário */
+label,.rotulo{display:block;font-weight:600;font-size:.9rem;margin:0 0 .25rem}
+.campo{margin:0 0 .9rem}
+.campo .dica{color:var(--muted);font-size:.83rem;font-weight:400;margin:0 0 .35rem}
+input[type=text],textarea,select{
+  width:100%;font:inherit;font-size:.94rem;color:var(--ink);background:var(--painel2);
+  border:1px solid var(--line2);border-radius:8px;padding:.5rem .6rem
+}
+textarea{resize:vertical;min-height:3.6em}
+input[type=text]:focus,textarea:focus,select:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+select{cursor:pointer}
+.linha-campos{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.check{display:flex;gap:.5rem;align-items:flex-start;font-weight:400;font-size:.9rem;margin:.4rem 0}
+.check input{margin-top:.28em;flex:0 0 auto}
+
+/* botões */
+.btn{font:inherit;font-size:.9rem;font-weight:600;border-radius:8px;padding:.48rem .9rem;cursor:pointer;border:1px solid var(--acc);background:var(--acc);color:var(--acc-ink)}
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-fantasma{background:transparent;color:var(--ink);border-color:var(--line2)}
+.btn-fantasma:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+.btn-perigo{background:transparent;color:var(--alto);border-color:var(--alto)}
+.btn-mini{font-size:.8rem;padding:.28rem .6rem}
+.acoes{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-top:1rem}
+.acoes-fim{margin-left:auto}
+
+/* pílulas e avisos */
+.pilula{display:inline-flex;align-items:center;gap:.3rem;border-radius:999px;padding:.15rem .6rem;font-size:.78rem;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.pilula-alto{background:var(--alto-bg);color:var(--alto);border-color:var(--alto)}
+.pilula-medio{background:var(--medio-bg);color:var(--medio);border-color:var(--medio)}
+.pilula-baixo{background:var(--baixo-bg);color:var(--baixo);border-color:var(--baixo)}
+.pilula-neutra{background:var(--painel2);color:var(--muted);border-color:var(--line2)}
+.pilula-acc{background:var(--acc-soft);color:var(--acc);border-color:var(--acc)}
+.pilula-aviso{background:var(--aviso-bg);color:var(--aviso);border-color:var(--aviso)}
+.nota{border-left:3px solid var(--line2);background:var(--painel2);padding:.6rem .8rem;border-radius:0 8px 8px 0;font-size:.88rem;margin:.6rem 0}
+.nota-aviso{border-color:var(--aviso);background:var(--aviso-bg);color:var(--aviso)}
+.nota-erro{border-color:var(--erro);background:var(--erro-bg);color:var(--erro)}
+.nota-acc{border-color:var(--acc);background:var(--acc-soft)}
+.nota p:last-child{margin-bottom:0}
+.nota ul{margin-bottom:0}
+
+/* tabelas */
+.rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.6rem 0}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border:1px solid var(--line);padding:.4rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--painel2);font-weight:700}
+caption{caption-side:top;text-align:left;font-weight:700;font-size:.9rem;padding-bottom:.4rem}
+
+/* abas */
+.abas{display:flex;gap:.35rem;border-bottom:1px solid var(--line);margin:0 0 1rem;flex-wrap:wrap}
+.aba{font:inherit;font-size:.9rem;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:.5rem .8rem;cursor:pointer;color:var(--muted)}
+.aba[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* cartões */
+.grade-tecnicas{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
+.tecnica{border:1px solid var(--line);border-radius:var(--r);padding:.8rem;background:var(--painel2)}
+.tecnica.ativa{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-soft)}
+.tecnica h3{margin:0 0 .2em;font-size:.98rem}
+.tecnica .meta{font-size:.78rem;color:var(--muted);margin:0 0 .5em}
+.disparo{font-size:.9rem;font-style:italic;border-left:3px solid var(--acc);padding-left:.6rem;margin:.5rem 0}
+.tecnica dl{margin:.5rem 0 0;font-size:.8rem}
+.tecnica dt{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;margin-top:.4rem}
+.tecnica dd{margin:0}
+
+.item{border:1px solid var(--line);border-radius:var(--r);padding:.9rem;margin:0 0 .8rem;background:var(--painel)}
+.item.rascunho{border-style:dashed;background:var(--painel2)}
+.item-topo{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem}
+.item-id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:.82rem;color:var(--muted)}
+.enunciado{font-size:.95rem;margin:0 0 .6rem}
+.enunciado b{font-weight:700}
+.derivado{margin-top:.7rem}
+.vazio{color:var(--muted);font-size:.9rem;font-style:italic}
+
+.sumario{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:.4rem 0 0}
+.sumario b{color:var(--ink);font-size:1.05rem;display:block;font-weight:700}
+
+details{border:1px solid var(--line);border-radius:8px;padding:.5rem .7rem;margin:.6rem 0;background:var(--painel2)}
+details>summary{cursor:pointer;font-weight:600;font-size:.88rem}
+details[open]>summary{margin-bottom:.5rem}
+
+/* rodapé */
+.rodape{border-top:1px solid var(--line);background:var(--painel);margin-top:2rem}
+.rodape .envelope{padding-top:1.4rem}
+.limites{margin:0 0 1rem}
+.limites ul{font-size:.88rem;color:var(--muted)}
+.limites li b{color:var(--ink)}
+.rodape-fim{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--muted);padding-bottom:1.5rem}
+.selo-ok{background:var(--baixo-bg);color:var(--baixo);border-color:var(--baixo)}
+.selo-falha{background:var(--erro-bg);color:var(--erro);border-color:var(--erro)}
+
+/* metodo/governanca-hitl.md manda explicitar os limites NA INTERFACE. Some com a
+   navegação ao imprimir, nunca com o bloco de limites nem com o selo do autoteste. */
+@media print{
+  .topo,.acoes,.passos{display:none}
+  body{background:#fff;color:#000}
+  .bloco,.item,.nota,.limites{break-inside:avoid}
+  .bloco{box-shadow:none;border:1px solid #999}
+  .rodape{border-top:2px solid #999;margin-top:1rem}
+  details{border:1px solid #999}
+}
 </style>
-<h1>riscos-pppm</h1>
-<p>Levantamento de riscos de projeto com método PMBOK — sem instalar nada, sem que nenhum dado saia da sua máquina.</p>
-<p><strong>A interface está sendo implementada.</strong> O método já está completo e legível em
-<a href="https://github.com/Filipetb/riscos-pppm/tree/main/metodo"><code>metodo/</code></a>.</p>
+</head>
+<body>
+
+<noscript>
+  <div class="faixa-erro">
+    <div class="envelope">
+      <p>Esta página precisa de JavaScript, e ele está desligado.</p>
+      <p style="font-weight:400">Não é por falta de servidor: a página não faz nenhuma requisição de rede. É que todo o
+      método — as duas réguas, o gate de validação humana e a exportação — é calculado aqui mesmo, no seu navegador.
+      Com o script desligado não existe o que mostrar.</p>
+      <p style="font-weight:400">Habilite o JavaScript para esta página e recarregue. Se o bloqueio vem de política da
+      sua organização, o método continua legível em texto na pasta <code>metodo/</code> do repositório.</p>
+    </div>
+  </div>
+</noscript>
+
+<div id="alerta-teste" class="faixa-erro" hidden role="alert"></div>
+<div id="alerta-abas" class="faixa-aviso" hidden role="status"></div>
+
+<header class="topo">
+  <div class="envelope">
+    <div class="topo-linha">
+      <div>
+        <h1>riscos-pppm — sessão de riscos</h1>
+        <p class="sub">Enquadrar → Identificar → Priorizar → Responder → Registrar. Método PPPM/BSBr + PMBOK. Nada sai da sua máquina.</p>
+      </div>
+      <div class="topo-acoes">
+        <span id="aviso-armazenamento" class="pilula pilula-aviso" hidden></span>
+        <button type="button" class="btn btn-fantasma btn-mini" id="btn-limpar">Limpar sessão</button>
+      </div>
+    </div>
+    <nav class="passos" id="passos" aria-label="Etapas da sessão"></nav>
+  </div>
+</header>
+
+<main class="envelope painel" id="painel"></main>
+
+<footer class="rodape">
+  <div class="envelope">
+    <section class="limites">
+      <h2>Limites da ferramenta</h2>
+      <ul>
+        <li><b>A ferramenta não decide.</b> Organiza evidência e calcula de forma consistente. A assinatura é humana.</li>
+        <li><b>A ferramenta não sabe do seu projeto.</b> Toda nota vem de quem preenche; ela não valida se a nota é honesta.</li>
+        <li><b>A ferramenta não substitui</b> o plano de gerenciamento de riscos, nem a análise quantitativa, nem o monitoramento contínuo.</li>
+        <li><b>Nenhum dado sai da máquina.</b> Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.</li>
+      </ul>
+    </section>
+    <p class="rodape-fim">
+      <span class="pilula" id="selo-teste">autoteste…</span>
+      <span>Método: kernel <code>metodo/</code> · app <span id="v-app"></span></span>
+      <span>O autoteste confere a consistência interna do app; a paridade com <code>metodo/</code>
+        é verificada por <code>scripts/verificar-kernel.py</code>, no repositório.</span>
+      <span><a href="https://github.com/Filipetb/riscos-pppm">Repositório e método completo</a></span>
+      <span>PMI®, PMBOK® e PMP® são marcas do Project Management Institute, Inc.</span>
+    </p>
+  </div>
+</footer>
+
+<script type="text/csv" id="tecnicas-csv">
+id,tecnica,origem_pmbok,polaridade,pergunta_disparo,padrao_saida,serve_para,esforco
+T01,Pré-mortem,Premortem / retrospectiva prospectiva,ameaca,"Estamos 6 meses à frente e o projeto fracassou de forma acachapante. Escreva a manchete. O que deu errado?",cenário de falha → causas → prevenção,projeto novo|go-live|marco crítico,baixo
+T02,Auditoria de Premissas,Análise de premissas e restrições,ambas,"Liste tudo que este plano assume como verdade sem ter verificado. Qual delas, se falsa, derruba o plano?",listar → avaliar confiança e impacto → estressar a mais fraca → reforçar,plano recém-feito|estimativa|cronograma,baixo
+T03,Lista de Categorias (EAR),Prompt list / Estrutura Analítica dos Riscos,ambas,"Percorra as categorias uma a uma: técnico, externo, organizacional, gerência de projeto, dados, pessoas, legal. O que aparece em cada uma?",categorias → riscos → mitigações,varredura inicial|checagem de cobertura,baixo
+T04,Análise de Modos de Falha,FMEA simplificado,ameaca,"Componente por componente: de quantas formas diferentes esta parte pode falhar?",componentes → falhas → prevenção,sistema com partes|integração|infraestrutura,medio
+T05,Falha em Cascata,Análise de causa-raiz e dependências,ameaca,"Suponha que esta peça falhou. Rastreie: o que quebra em seguida? E depois disso?",disparar falha → rastrear propagação → achar amplificadores → desacoplar,dependências|fornecedores|arquitetura acoplada,medio
+T06,Advogado do Diabo,Facilitação adversarial,ameaca,"Assuma que este plano é ruim e você precisa provar. Qual é o argumento mais forte contra?",premissas → contestações → fortalecimento,decisão travada|consenso rápido demais|groupthink,baixo
+T07,Cenários de Ruptura,Teste de resiliência,ameaca,"Escolha algo que 'nunca falha' e quebre de propósito. O que acontece? Quanto tempo até perceber?",quebrar → observar → endurecer,operação crítica|continuidade|plano B,medio
+T08,SWOT,Análise SWOT,ambas,"Forças e fraquezas internas; ameaças e oportunidades externas. Cruze: que fraqueza é exposta por qual ameaça? Que força captura qual oportunidade?",forças/fraquezas/oportunidades/ameaças → cruzamentos → riscos,início de projeto|planejamento estratégico,baixo
+T09,Entrevista Estruturada,Entrevistas,ambas,"Pergunte a quem já viveu isso: o que te surpreendeu da última vez? O que você faria diferente?",papel → experiência → risco tácito,conhecimento disperso|especialista disponível,medio
+T10,Análise de Documentos,Análise de documentos,ambas,"Leia contratos, atas, lições aprendidas e status anteriores procurando promessa vaga, prazo sem folga e premissa não declarada.",documento → trecho suspeito → risco,projeto com histórico|contrato assinado,medio
+T11,Delphi,Técnica Delphi,ambas,"Colete opiniões de especialistas em rodadas anônimas, mostre o resumo, e repita até convergir.",rodada → convergência → risco consensual,grupo com hierarquia|opiniões divergentes,alto
+T12,Caça à Oportunidade,Identificação de riscos positivos,oportunidade,"Onde uma coisa boa pode acontecer se a gente se preparar? Que folga, ativo ou tendência ainda não estamos aproveitando?",folga/ativo/tendência → oportunidade → como explorar,portfólio|negociação|projeto com folga,baixo
+</script>
+
+<script>
+/* =====================================================================
+   riscos-pppm — superfície web do kernel em metodo/
+   Um arquivo, sem build, sem rede, sem backend. Tudo em pt-BR.
+   O método vive em metodo/*.md e metodo/tecnicas.csv; este arquivo
+   CONSOME e nunca redefine fórmulas, faixas, escalas ou estratégias.
+   ===================================================================== */
+(function () {
+'use strict';
+
+var APP_VERSAO = '1.0.0';
+/* metodo/ não declara versão própria. O elo de Processamento da rastreabilidade
+   pede "versão do método"; quem cumpre esse papel é a versão do app, que é o que
+   fixa as regras aplicadas. O registro diz isso em vez de inventar um marcador
+   que o kernel não tem. A paridade app↔kernel é atestada por
+   scripts/verificar-kernel.py, não por uma string. */
+var VERSAO_DAS_REGRAS = 'riscos-pppm ' + APP_VERSAO + ' (o kernel em metodo/ não declara versão própria)';
+var CHAVE_ARMAZENAMENTO = 'riscos-pppm/sessao/v1';
+
+/* =====================================================================
+   1. NÚCLEO DO MÉTODO — funções puras, sem DOM.
+      Isolar o cálculo é o que torna o autoteste abaixo possível.
+   ===================================================================== */
+
+/* --- 1.1 Parser de CSV (RFC 4180: campo entre aspas, aspas escapadas) --- */
+function parseCSV(texto) {
+  var t = String(texto == null ? '' : texto)
+    .replace(/^\uFEFF/, '')      // BOM, se houver
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/^\n/, '');         // <script> preserva a quebra inicial
+  var linhas = [], linha = [], campo = '', aspas = false, i = 0, c;
+  while (i < t.length) {
+    c = t.charAt(i);
+    if (aspas) {
+      if (c === '"') {
+        if (t.charAt(i + 1) === '"') { campo += '"'; i += 2; continue; }
+        aspas = false; i += 1; continue;
+      }
+      campo += c; i += 1; continue;
+    }
+    if (c === '"') { aspas = true; i += 1; continue; }
+    if (c === ',') { linha.push(campo); campo = ''; i += 1; continue; }
+    if (c === '\n') { linha.push(campo); linhas.push(linha); linha = []; campo = ''; i += 1; continue; }
+    campo += c; i += 1;
+  }
+  if (campo !== '' || linha.length) { linha.push(campo); linhas.push(linha); }
+  if (!linhas.length) return { colunas: [], registros: [] };
+  var colunas = linhas[0], registros = [], r, k, obj;
+  for (r = 1; r < linhas.length; r++) {
+    if (linhas[r].length === 1 && linhas[r][0] === '') continue;
+    obj = {};
+    for (k = 0; k < colunas.length; k++) {
+      obj[colunas[k]] = linhas[r][k] === undefined ? '' : linhas[r][k];
+    }
+    obj.__colunas = linhas[r].length;
+    registros.push(obj);
+  }
+  return { colunas: colunas, registros: registros };
+}
+
+/* --- 1.2 Régua A — Probabilidade × Impacto (metodo/escalas-e-priorizacao.md) --- */
+function ehNota(n) { return typeof n === 'number' && isFinite(n) && n === Math.round(n) && n >= 1 && n <= 5; }
+
+function severidade(probabilidade, impacto) {
+  if (!ehNota(probabilidade) || !ehNota(impacto)) return null;
+  return probabilidade * impacto;                       // 1 a 25
+}
+
+/* As faixas deixam 13 e 14 sem cobertura, e isso é seguro porque P×I nunca os
+   produz: os únicos valores possíveis são {1,2,3,4,5,6,8,9,10,12,15,16,20,25}.
+   Não alargar as faixas para "fechar" esse vão — ele é a forma da tabela do
+   kernel, não um defeito dela. */
+var FAIXAS_A = [
+  { chave: 'alto',  min: 15, max: 25, emoji: '🔴', rotulo: 'Alto',  classe: 'pilula-alto',
+    tratamento: 'Resposta obrigatória, com dono e gatilho antes do encerramento da sessão' },
+  { chave: 'medio', min: 5,  max: 12, emoji: '🟡', rotulo: 'Médio', classe: 'pilula-medio',
+    tratamento: 'Resposta planejada; aceitável aceitar ativamente com justificativa' },
+  { chave: 'baixo', min: 1,  max: 4,  emoji: '🟢', rotulo: 'Baixo', classe: 'pilula-baixo',
+    tratamento: 'Lista de observação; sem ação, só revisão periódica' }
+];
+
+function faixaA(sev) {
+  if (typeof sev !== 'number' || !isFinite(sev)) return null;
+  for (var i = 0; i < FAIXAS_A.length; i++) {
+    if (sev >= FAIXAS_A[i].min && sev <= FAIXAS_A[i].max) return FAIXAS_A[i];
+  }
+  return null;
+}
+
+/* Impacto é preenchido por dimensão; vale a MAIOR nota. */
+function impactoAgregado(dimensoes) {
+  var maior = null, i, n;
+  for (i = 0; i < dimensoes.length; i++) {
+    n = dimensoes[i];
+    if (ehNota(n) && (maior === null || n > maior)) maior = n;
+  }
+  return maior;
+}
+
+/* --- 1.3 Régua B — fórmula da Aula 2 (metodo/escalas-e-priorizacao.md) --- */
+var PESOS_B = { impacto: 30, viabilidade: 20, dados: 20, seguranca: 15, valor: 15 };
+
+function prioridadeB(impacto, viabilidade, dados, seguranca, valor) {
+  var n = [impacto, viabilidade, dados, seguranca, valor], i;
+  for (i = 0; i < n.length; i++) { if (!ehNota(n[i])) return null; }
+  return ((impacto * PESOS_B.impacto) + (viabilidade * PESOS_B.viabilidade) +
+          (dados * PESOS_B.dados) + (seguranca * PESOS_B.seguranca) +
+          (valor * PESOS_B.valor)) / 5;                 // 20 a 100
+}
+
+var FAIXAS_B = [
+  { chave: 'agora',    min: 80, max: 100, rotulo: 'Fazer agora',   classe: 'pilula-baixo',
+    decisao: 'Alto impacto, alta viabilidade, risco controlável' },
+  { chave: 'preparar', min: 60, max: 79,  rotulo: 'Preparar',      classe: 'pilula-medio',
+    decisao: 'Alto impacto, mas exige dados, governança ou integração' },
+  { chave: 'nao',      min: 20, max: 59,  rotulo: 'Não priorizar', classe: 'pilula-neutra',
+    decisao: 'Baixo impacto, baixa viabilidade ou risco desproporcional' }
+];
+
+function faixaB(prioridade) {
+  if (typeof prioridade !== 'number' || !isFinite(prioridade)) return null;
+  for (var i = 0; i < FAIXAS_B.length; i++) {
+    if (prioridade >= FAIXAS_B[i].min && prioridade <= FAIXAS_B[i].max) return FAIXAS_B[i];
+  }
+  return null;
+}
+
+/* --- 1.4 Qualidade do dado e "Investigue" --- */
+function precisaInvestigar(sev, qualidadeDado) {
+  var f = faixaA(sev);
+  return !!(f && f.chave === 'alto' && qualidadeDado === 'baixa');
+}
+
+/* --- 1.5 Corte obrigatório: dono é pessoa nomeada (metodo/governanca-hitl.md) --- */
+/* Aqui o falso positivo custa muito mais que o falso negativo: o aviso vai para a
+   coluna `observacao_dono` e para o elo de Validação, então marcar uma pessoa real
+   faz o registro auditável afirmar que ela não é pessoa. Por isso a regra erra para
+   aceitar.
+
+   Duas listas, de propósito:
+   - EXATOS casam com a string inteira. É onde vivem as siglas curtas (pmo, ti, rh),
+     que como primeira palavra seriam nomes legítimos: Ti Nguyen, Rh Costa, Na Silva.
+   - COLETIVOS casam como primeira palavra ("Equipe de dados"). Só entram termos com
+     4+ letras, inequívocos como substantivo coletivo. */
+var DONOS_GENERICOS_EXATOS = ['pmo','ti','rh','na','n/a','tbd','a definir','a combinar','a designar',
+  'equipe','time','área','area','setor','departamento','diretoria','gerência','gerencia','coordenação',
+  'coordenacao','comitê','comite','conselho','squad','célula','celula','board','staff','todos','ninguém',
+  'ninguem','jurídico','juridico','financeiro','compras','operações','operacoes','fornecedor','cliente',
+  'empresa','organização','organizacao','projeto','escritório','escritorio','definir','a definir depois'];
+
+var DONOS_COLETIVOS_INICIAIS = ['equipe','time','área','area','setor','departamento','diretoria',
+  'gerência','gerencia','coordenação','coordenacao','comitê','comite','conselho','comissão','comissao',
+  'squad','célula','celula','board','staff','escritório','escritorio','grupo','núcleo','nucleo'];
+
+function analisarDono(dono) {
+  var d = String(dono == null ? '' : dono).trim();
+  if (!d) {
+    return { estado: 'vazio', mensagem:
+      'Corte obrigatório (critério de saída): se não houver dono da decisão humana (risk owner), o caso não está pronto.' };
+  }
+  var norm = d.toLowerCase().replace(/\s+/g, ' ');
+  var semArtigo = norm.replace(/^(a|o|as|os)\s+/, '');
+  var primeiro = semArtigo.split(/[\s,;()\/]+/)[0] || '';
+  var generico = DONOS_GENERICOS_EXATOS.indexOf(norm) !== -1 ||
+                 DONOS_GENERICOS_EXATOS.indexOf(semArtigo) !== -1 ||
+                 (primeiro.length >= 4 && DONOS_COLETIVOS_INICIAIS.indexOf(primeiro) !== -1);
+  if (generico) {
+    return { estado: 'generico', mensagem:
+      'Dono da decisão humana (risk owner) é uma pessoa nomeada, não uma área. “' + d +
+      '” parece um time ou uma área — nenhum deles assina nada. O registro aceita, mas a governança não.' };
+  }
+  return { estado: 'ok', mensagem: '' };
+}
+
+/* --- 1.6 Gatilhos de validação humana obrigatória (os 6 de metodo/governanca-hitl.md) --- */
+function gatilhosHITL(item) {
+  var g = [], sev = severidadeDoItem(item), f = faixaA(sev), alto = !!(f && f.chave === 'alto');
+  if (alto) {
+    g.push({ id: 'g1', texto: 'Severidade alta (🔴 15–25): severidade ' + sev + '. Faixa alta nunca segue no automático.' });
+  }
+  if (item.estrategia === 'Evitar' || item.estrategia === 'Explorar') {
+    g.push({ id: 'g2', texto: 'Estratégia ' + item.estrategia + ' muda o plano do projeto — exige confirmação e gera pendência de replanejamento.' });
+  }
+  if (item.dadoSensivel) {
+    g.push({ id: 'g3', texto: 'Envolve dado pessoal, sensível ou sujeito a sigilo contratual.' });
+  }
+  if (alto && item.qualidade === 'baixa') {
+    g.push({ id: 'g4', texto: 'Severidade alta com qualidade de dado baixa (🔴 estimativa sem referência): decidir sobre chute é pior que não decidir. O item está marcado Investigue.' });
+  }
+  if (item.riscoSecundarioFaixa === 'medio' || item.riscoSecundarioFaixa === 'alto') {
+    g.push({ id: 'g5', texto: 'A resposta gera risco secundário de severidade ' + (item.riscoSecundarioFaixa === 'alto' ? 'alta' : 'média') + ' ou superior.' });
+  }
+  if (item.estrategia === 'Aceitar' && alto) {
+    g.push({ id: 'g6', texto: 'Item marcado Aceitar estando em faixa alta.' });
+  }
+  return g;
+}
+
+/* --- 1.7 As 5 regras de consistência (metodo/estrategias-de-resposta.md) --- */
+function regrasConsistencia(item) {
+  var sev = severidadeDoItem(item), f = faixaA(sev), alto = !!(f && f.chave === 'alto');
+  var t = function (s) { return String(s == null ? '' : s).trim(); };
+  return [
+    { n: 1, titulo: 'Faixa alta exige resposta', bloqueia: true,
+      aplica: alto,
+      ok: !alto || !!(item.estrategia && t(item.acao) && t(item.dono) && t(item.gatilho)),
+      mensagem: 'Regra 1 — Faixa alta exige resposta: nenhum item 🔴 fecha a sessão sem estratégia, ação, dono e gatilho.' },
+    { n: 2, titulo: 'Aceitar exige justificativa', bloqueia: true,
+      aplica: item.estrategia === 'Aceitar',
+      ok: item.estrategia !== 'Aceitar' || !!t(item.justificativa),
+      mensagem: 'Regra 2 — Aceitar exige justificativa: é a única estratégia que precisa de motivo escrito, porque é a mais usada por omissão.' },
+    { n: 3, titulo: 'Evitar e Explorar mudam o plano', bloqueia: false,
+      aplica: item.estrategia === 'Evitar' || item.estrategia === 'Explorar',
+      ok: true,
+      mensagem: 'Regra 3 — Evitar e Explorar mudam o plano: gera uma pendência de replanejamento, não uma anotação no registro de riscos.' },
+    { n: 4, titulo: 'Resposta cria risco', bloqueia: true,
+      aplica: !!item.estrategia,
+      ok: !item.estrategia || item.riscoSecundarioAvaliado === true || !!t(item.riscoSecundario),
+      mensagem: 'Regra 4 — Resposta cria risco: responda “e o que essa ação pode causar?”. Descreva o risco secundário ou marque que avaliou e não há.' },
+    { n: 5, titulo: 'Escalar exige destinatário', bloqueia: true,
+      aplica: item.estrategia === 'Escalar',
+      ok: item.estrategia !== 'Escalar' || !!t(item.destinatario),
+      mensagem: 'Regra 5 — Escalar exige destinatário: escalar sem nomear quem recebe é abandonar, não escalar.' }
+  ];
+}
+
+/* =====================================================================
+   2. TABELAS DO MÉTODO — transcritas do kernel, nunca reinterpretadas
+   ===================================================================== */
+
+var COLUNAS_ENQUADRAMENTO = [
+  { chave: 'contexto', titulo: '1. Contexto', pergunta: 'Qual projeto, processo ou área será analisado?',
+    uso: 'Cabeçalho do registro; delimita o que conta como risco' },
+  { chave: 'dor', titulo: '2. Dor (problema / necessidade de negócio)', pergunta: 'Qual problema real precisa ser resolvido?',
+    uso: 'Aponta onde as técnicas de identificação rendem mais' },
+  { chave: 'dados', titulo: '3. Dados', pergunta: 'Que informações existem para apoiar a decisão?',
+    uso: 'Alimenta a qualidade do dado do risco' },
+  { chave: 'riscos', titulo: '4. Riscos', pergunta: 'O que exige validação humana, ética ou segurança?',
+    uso: 'Semente da identificação; dispara gatilhos de HITL' },
+  { chave: 'valor', titulo: '5. Valor', pergunta: 'Que benefício executivo pode ser gerado?',
+    uso: 'Referência de impacto: risco é o que ameaça isto' }
+];
+
+var PROBABILIDADE = [
+  { n: 1, rotulo: 'Muito baixa', criterio: 'Não conheço caso de isso ter acontecido aqui' },
+  { n: 2, rotulo: 'Baixa',       criterio: 'Já ouvi falar, mas é raro' },
+  { n: 3, rotulo: 'Média',       criterio: 'Acontece de vez em quando; ninguém se surpreenderia' },
+  { n: 4, rotulo: 'Alta',        criterio: 'Aconteceu no projeto anterior' },
+  { n: 5, rotulo: 'Muito alta',  criterio: 'Está acontecendo, ou é praticamente certo' }
+];
+
+var IMPACTO_ROTULOS = ['Muito baixo', 'Baixo', 'Médio', 'Alto', 'Muito alto'];
+var DIMENSOES_IMPACTO = [
+  { chave: 'impPrazo',  titulo: 'Prazo',
+    criterios: ['Absorvido pela folga', 'Atraso interno, marco preservado', 'Marco desliza', 'Marco crítico perdido', 'Prazo contratual perdido'] },
+  { chave: 'impCusto',  titulo: 'Custo',
+    criterios: ['Irrelevante', 'Absorvido pelo orçamento', 'Estouro visível, gerenciável', 'Precisa de aprovação extra', 'Inviabiliza o business case'] },
+  { chave: 'impEscopo', titulo: 'Escopo/Qualidade',
+    criterios: ['Imperceptível', 'Ajuste menor', 'Entrega degradada', 'Requisito comprometido', 'Entrega não serve'] }
+];
+
+var QUALIDADE_DADO = [
+  { chave: 'alta',  emoji: '🟢', rotulo: 'Alta',  base: 'Dado histórico, medição ou contrato' },
+  { chave: 'media', emoji: '🟡', rotulo: 'Média', base: 'Experiência direta de quem viveu situação parecida' },
+  { chave: 'baixa', emoji: '🔴', rotulo: 'Baixa', base: 'Estimativa sem referência' }
+];
+
+var ESTRATEGIAS = {
+  ameaca: [
+    { nome: 'Escalar',    oque: 'O risco está fora da autoridade do projeto; transferir a posse para programa, portfólio ou diretoria', quando: 'O tratamento excede seu mandato ou orçamento', escolha: 'Isso é meu para resolver?' },
+    { nome: 'Evitar',     oque: 'Eliminar a ameaça — mudar o plano, remover a causa, cortar o escopo afetado', quando: 'Severidade alta e a mudança é viável', escolha: 'Dá para fazer a causa deixar de existir?' },
+    { nome: 'Transferir', oque: 'Passar o impacto a terceiro — seguro, garantia, cláusula contratual, terceirização', quando: 'O terceiro absorve melhor que você', escolha: 'Alguém consegue carregar isso melhor?' },
+    { nome: 'Mitigar',    oque: 'Reduzir probabilidade ou impacto a um nível aceitável', quando: 'Severidade média a alta, sem como evitar', escolha: 'Dá para diminuir a chance ou o estrago?' },
+    { nome: 'Aceitar',    oque: 'Não agir preventivamente. Ativa: reserva de contingência e plano de resposta. Passiva: apenas monitorar', quando: 'Severidade baixa, ou custo do tratamento maior que o do impacto', escolha: 'O tratamento custa mais que o problema?' }
+  ],
+  oportunidade: [
+    { nome: 'Escalar',      oque: 'Excede a autoridade do projeto; entregar a quem pode capturar', espelha: 'Escalar' },
+    { nome: 'Explorar',     oque: 'Garantir que aconteça — remover a incerteza, alocar recurso para tornar certo', espelha: 'Evitar' },
+    { nome: 'Compartilhar', oque: 'Sócio, parceria ou joint venture com quem captura melhor', espelha: 'Transferir' },
+    { nome: 'Melhorar',     oque: 'Aumentar probabilidade ou impacto positivo', espelha: 'Mitigar' },
+    { nome: 'Aceitar',      oque: 'Aproveitar se aparecer, sem investir para provocar', espelha: 'Aceitar' }
+  ]
+};
+
+var CRITERIOS_B = [
+  { chave: 'bImpacto',     titulo: 'Impacto',     peso: 30, pergunta: 'Qual resultado muda se isso for implementado?' },
+  { chave: 'bViabilidade', titulo: 'Viabilidade', peso: 20, pergunta: 'Conseguimos começar sem colocar a operação em risco?' },
+  { chave: 'bDados',       titulo: 'Dados',       peso: 20, pergunta: 'Os dados existem, são acessíveis e confiáveis?' },
+  { chave: 'bSeguranca',   titulo: 'Segurança',   peso: 15, pergunta: 'Qual o risco ético, legal, operacional ou reputacional?' },
+  { chave: 'bValor',       titulo: 'Valor',       peso: 15, pergunta: 'Que benefício executivo dá para demonstrar e medir?' }
+];
+
+var NOTAS_B = [
+  { n: 1, rotulo: 'baixa' }, { n: 2, rotulo: '—' }, { n: 3, rotulo: 'média' },
+  { n: 4, rotulo: '—' },     { n: 5, rotulo: 'alta' }
+];
+
+var COMBINACOES = [
+  ['Sessão curta (15 min, demo, aula)', 'T01 Pré-mortem + T02 Auditoria de Premissas'],
+  ['Projeto novo, começando do zero', 'T08 SWOT + T03 Categorias + T02 Premissas'],
+  ['Go-live / marco crítico', 'T01 Pré-mortem + T05 Falha em Cascata + T07 Ruptura'],
+  ['Sistema com integrações', 'T04 Modos de Falha + T05 Falha em Cascata'],
+  ['Grupo com hierarquia forte', 'T11 Delphi + T06 Advogado do Diabo'],
+  ['Caçar riscos positivos', 'T12 Caça à Oportunidade + T08 SWOT']
+];
+
+var NAO_ESCORREGAR = [
+  ['Risco ≠ problema', 'Problema já aconteceu; risco ainda não. Se já aconteceu, é questão — outro registro.'],
+  ['Risco ≠ causa', '“Fornecedor único” é causa. O risco é o que pode ocorrer por causa dela.'],
+  ['Risco ≠ impacto', '“Atraso de 3 semanas” é efeito. O risco é o evento que produziria o atraso.'],
+  ['Oportunidade ≠ ideia boa', 'Oportunidade é incerta. Se depende só de decidir, é ação — vai para o plano, não para o registro.']
+];
+
+var FLUXO_VALIDACAO =
+  '1. IA gera recomendação → 2. Consultor verifica dados e contexto → 3. Especialista valida riscos e regras → 4. Gestor decide e registra';
+var NOTA_COLAPSO =
+  'Sessão individual: os passos 2, 3 e 4 do fluxo de validação da Aula 2 COLAPSARAM num único ponto de confirmação humana. ' +
+  'Este registro diz que colapsaram em vez de fingir que os três ocorreram.';
+var CORTE_OBRIGATORIO = 'Se não houver dono da decisão humana, o caso não está pronto.';
+var FORMULA_A = 'Severidade = Probabilidade × Impacto (1–25); faixas 🔴 15–25 · 🟡 5–12 · 🟢 1–4';
+var FORMULA_B = 'Prioridade = ((I×30)+(V×20)+(D×20)+(S×15)+(Val×15)) ÷ 5; escala 1·3·5; faixas 80–100 · 60–79 · 20–59';
+
+/* =====================================================================
+   3. CATÁLOGO DE TÉCNICAS — parseado do CSV embutido, nunca hardcoded
+   ===================================================================== */
+var CATALOGO = { colunas: [], registros: [] };
+try {
+  var noCSV = document.getElementById('tecnicas-csv');
+  CATALOGO = parseCSV(noCSV ? noCSV.textContent : '');
+} catch (e) { CATALOGO = { colunas: [], registros: [] }; }
+
+function tecnicasDe(polaridade) {
+  return CATALOGO.registros.filter(function (t) {
+    return t.polaridade === polaridade || t.polaridade === 'ambas';
+  });
+}
+function tecnicaPorId(id) {
+  for (var i = 0; i < CATALOGO.registros.length; i++) {
+    if (CATALOGO.registros[i].id === id) return CATALOGO.registros[i];
+  }
+  return null;
+}
+
+/* =====================================================================
+   4. AUTOTESTE EMBUTIDO — roda na carga
+   ===================================================================== */
+function rodarAutoteste() {
+  var falhas = [], total = 0;
+
+  /* JSON.stringify serializa NaN, Infinity e undefined todos como "null" ou
+     undefined, então a comparação por stringify deixava NaN passar por null —
+     exatamente o que as checagens de faixaA()/prioridadeB() existem para pegar.
+     Esta comparação é estrutural e sensível a tipo. */
+  function equivalente(a, b) {
+    if (typeof a !== typeof b) return false;
+    if (a === null || b === null) return a === b;
+    if (typeof a === 'number') {
+      if (isNaN(a) || isNaN(b)) return isNaN(a) && isNaN(b);
+      return a === b;
+    }
+    if (typeof a !== 'object') return a === b;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    var i, ka, kb;
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      for (i = 0; i < a.length; i++) { if (!equivalente(a[i], b[i])) return false; }
+      return true;
+    }
+    ka = Object.keys(a); kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (i = 0; i < ka.length; i++) {
+      if (kb.indexOf(ka[i]) === -1) return false;
+      if (!equivalente(a[ka[i]], b[ka[i]])) return false;
+    }
+    return true;
+  }
+
+  function descrever(v) {
+    if (v === undefined) return 'undefined';
+    if (typeof v === 'number' && isNaN(v)) return 'NaN';
+    if (typeof v === 'number' && !isFinite(v)) return String(v);
+    try { return JSON.stringify(v); } catch (e) { return String(v); }
+  }
+
+  function checa(nome, obtido, esperado) {
+    total += 1;
+    if (!equivalente(obtido, esperado)) {
+      falhas.push(nome + ' — esperado ' + descrever(esperado) + ', obtido ' + descrever(obtido));
+    }
+  }
+
+  /* O comparador é a base de tudo o que vem abaixo: se ele for permissivo,
+     todo o resto vira teatro. */
+  checa('Comparador · NaN não passa por null', equivalente(NaN, null), false);
+  checa('Comparador · Infinity não passa por null', equivalente(Infinity, null), false);
+  checa('Comparador · undefined não passa por null', equivalente(undefined, null), false);
+  checa('Comparador · NaN casa com NaN', equivalente(NaN, NaN), true);
+  checa('Comparador · número não passa por string', equivalente(0, '0'), false);
+  checa('Comparador · arrays de tamanhos diferentes não casam', equivalente([1], [1, 2]), false);
+  checa('Comparador · objetos com chaves diferentes não casam', equivalente({ a: 1 }, { b: 1 }), false);
+  checa('Comparador · objetos iguais casam', equivalente({ a: [1, { b: 2 }] }, { a: [1, { b: 2 }] }), true);
+
+  /* =====================================================================
+     4.0 TRAVA DAS CONSTANTES — consistência interna do app.
+
+     O que estas checagens fazem: congelam as constantes do método nos valores
+     que este arquivo declara, de modo que qualquer edição no `docs/index.html`
+     quebre — inclusive edição que não muda nenhum resultado alcançável, como
+     alargar a faixa alta de 15 para 14 (14 não é produto de P×I).
+
+     O que elas NÃO fazem, e é importante não confundir: elas não leem
+     `metodo/`. Os dois lados de cada comparação estão dentro deste arquivo,
+     então uma edição feita NO KERNEL passaria despercebida aqui. Quem atesta a
+     paridade app↔kernel é `scripts/verificar-kernel.py`, que lê os dois lados de
+     verdade e roda fora do navegador.
+     ===================================================================== */
+
+  /* --- Régua A: faixas, lacuna e escalas (metodo/escalas-e-priorizacao.md) --- */
+  checa('Constante do método · FAIXAS_A verbatim',
+        FAIXAS_A.map(function (f) { return f.chave + ':' + f.min + '-' + f.max; }).join(' '),
+        'alto:15-25 medio:5-12 baixo:1-4');
+  checa('Constante do método · rótulos das faixas da Régua A verbatim',
+        FAIXAS_A.map(function (f) { return f.emoji + ' ' + f.rotulo; }).join(' | '),
+        '🔴 Alto | 🟡 Médio | 🟢 Baixo');
+
+  /* O mapa inteiro de 1 a 25. Trava as três faixas de uma vez e preserva a
+     lacuna 13–14, que é propriedade do kernel: P×I nunca produz 13 nem 14, e
+     o método não alarga a faixa para cobri-los. */
+  checa('Constante do método · mapa severidade→faixa de 1 a 25, com a lacuna 13–14 intacta',
+        (function () {
+          var m = [], v, f;
+          for (v = 1; v <= 25; v++) { f = faixaA(v); m.push(v + ':' + (f ? f.chave : '—')); }
+          return m.join(' ');
+        })(),
+        '1:baixo 2:baixo 3:baixo 4:baixo 5:medio 6:medio 7:medio 8:medio 9:medio 10:medio 11:medio 12:medio ' +
+        '13:— 14:— 15:alto 16:alto 17:alto 18:alto 19:alto 20:alto 21:alto 22:alto 23:alto 24:alto 25:alto');
+  checa('Constante do método · a lacuna entre 12 e 15: 13 não recebe faixa', faixaA(13), null);
+  checa('Constante do método · a lacuna entre 12 e 15: 14 não recebe faixa', faixaA(14), null);
+  checa('Constante do método · nenhum valor de 1 a 25 cai em duas faixas',
+        (function () {
+          var fora = [], v, n;
+          for (v = 1; v <= 25; v++) {
+            n = FAIXAS_A.filter(function (f) { return v >= f.min && v <= f.max; }).length;
+            if (n > 1) fora.push(v + ' em ' + n + ' faixas');
+          }
+          return fora;
+        })(), []);
+
+  checa('Constante do método · escala de Probabilidade é 1–5 com os rótulos da tabela',
+        PROBABILIDADE.map(function (x) { return x.n + '=' + x.rotulo; }).join(' '),
+        '1=Muito baixa 2=Baixa 3=Média 4=Alta 5=Muito alta');
+  checa('Constante do método · escala de Impacto é 1–5 com os rótulos da tabela',
+        IMPACTO_ROTULOS.join(' | '), 'Muito baixo | Baixo | Médio | Alto | Muito alto');
+  checa('Constante do método · as 3 dimensões de Impacto, com 5 níveis cada',
+        DIMENSOES_IMPACTO.map(function (d) { return d.titulo + ':' + d.criterios.length; }).join(' '),
+        'Prazo:5 Custo:5 Escopo/Qualidade:5');
+  checa('Constante do método · nota da Régua A é inteiro de 1 a 5',
+        [ehNota(0), ehNota(1), ehNota(5), ehNota(6), ehNota(3.5)].join(','),
+        'false,true,true,false,false');
+  checa('Constante do método · qualidade do dado tem 3 níveis',
+        QUALIDADE_DADO.map(function (q) { return q.chave + '=' + q.emoji; }).join(' '),
+        'alta=🟢 media=🟡 baixa=🔴');
+
+  /* --- Régua B: pesos, faixas e escala (metodo/escalas-e-priorizacao.md) --- */
+  checa('Constante do método · PESOS_B verbatim',
+        [PESOS_B.impacto, PESOS_B.viabilidade, PESOS_B.dados, PESOS_B.seguranca, PESOS_B.valor].join('/'),
+        '30/20/20/15/15');
+  checa('Constante do método · os pesos da Régua B somam 100',
+        PESOS_B.impacto + PESOS_B.viabilidade + PESOS_B.dados + PESOS_B.seguranca + PESOS_B.valor, 100);
+  checa('Constante do método · os pesos exibidos na UI são os mesmos do cálculo',
+        CRITERIOS_B.map(function (c) { return c.peso; }).join('/'), '30/20/20/15/15');
+  checa('Constante do método · ordem dos critérios da Régua B',
+        CRITERIOS_B.map(function (c) { return c.titulo; }).join(' → '),
+        'Impacto → Viabilidade → Dados → Segurança → Valor');
+  checa('Constante do método · FAIXAS_B verbatim',
+        FAIXAS_B.map(function (f) { return f.chave + ':' + f.min + '-' + f.max; }).join(' '),
+        'agora:80-100 preparar:60-79 nao:20-59');
+  checa('Constante do método · rótulos das faixas da Régua B verbatim',
+        FAIXAS_B.map(function (f) { return f.rotulo; }).join(' | '),
+        'Fazer agora | Preparar | Não priorizar');
+  checa('Constante do método · as 6 fronteiras da Régua B, e nada fora de 20–100',
+        [19, 20, 59, 60, 79, 80, 100, 101].map(function (v) {
+          var f = faixaB(v); return v + ':' + (f ? f.chave : '—');
+        }).join(' '),
+        '19:— 20:nao 59:nao 60:preparar 79:preparar 80:agora 100:agora 101:—');
+  checa('Constante do método · escala da Régua B é 1 baixa · 3 média · 5 alta',
+        NOTAS_B.map(function (n) { return n.n + '=' + n.rotulo; }).join(' '),
+        '1=baixa 2=— 3=média 4=— 5=alta');
+
+  /* --- Estratégias e regras (metodo/estrategias-de-resposta.md) --- */
+  checa('Constante do método · as 5 estratégias de ameaça verbatim',
+        ESTRATEGIAS.ameaca.map(function (x) { return x.nome; }).join(' | '),
+        'Escalar | Evitar | Transferir | Mitigar | Aceitar');
+  checa('Constante do método · as 5 estratégias de oportunidade verbatim',
+        ESTRATEGIAS.oportunidade.map(function (x) { return x.nome; }).join(' | '),
+        'Escalar | Explorar | Compartilhar | Melhorar | Aceitar');
+  checa('Constante do método · o espelhamento oportunidade→ameaça',
+        ESTRATEGIAS.oportunidade.map(function (x) { return x.nome + '→' + x.espelha; }).join(' '),
+        'Escalar→Escalar Explorar→Evitar Compartilhar→Transferir Melhorar→Mitigar Aceitar→Aceitar');
+  checa('Constante do método · as 5 regras de consistência, na ordem',
+        regrasConsistencia(novoItemCru()).map(function (r) { return r.n + '.' + r.titulo; }).join(' | '),
+        '1.Faixa alta exige resposta | 2.Aceitar exige justificativa | 3.Evitar e Explorar mudam o plano | ' +
+        '4.Resposta cria risco | 5.Escalar exige destinatário');
+
+  /* --- Governança (metodo/governanca-hitl.md) e enquadramento (metodo/glossario.md) --- */
+  var todosGatilhos = novoItemCru();
+  todosGatilhos.probabilidade = 5; todosGatilhos.impPrazo = 5;   /* 🔴 */
+  todosGatilhos.qualidade = 'baixa';
+  todosGatilhos.dadoSensivel = true;
+  todosGatilhos.riscoSecundarioFaixa = 'alto';
+  todosGatilhos.estrategia = 'Evitar';
+  checa('Constante do método · gatilhos 1 a 5 disparam juntos (estratégia Evitar)',
+        gatilhosHITL(todosGatilhos).map(function (g) { return g.id; }).join(','), 'g1,g2,g3,g4,g5');
+  todosGatilhos.estrategia = 'Aceitar';
+  checa('Constante do método · gatilho 6 existe e é o Aceitar em faixa alta',
+        gatilhosHITL(todosGatilhos).map(function (g) { return g.id; }).join(','), 'g1,g3,g4,g5,g6');
+  checa('Constante do método · as 5 colunas do enquadramento, na ordem',
+        COLUNAS_ENQUADRAMENTO.map(function (c) { return c.chave; }).join(' → '),
+        'contexto → dor → dados → riscos → valor');
+
+  /* 4.1 Régua B — os 3 casos de verificação do kernel (caso ERP da Aula 2) */
+  checa('Régua B · Previsão de atrasos críticos (5,4,4,4,5)', prioridadeB(5, 4, 4, 4, 5), 89);
+  checa('Régua B · Análise de riscos do go-live (5,4,3,3,5)',  prioridadeB(5, 4, 3, 3, 5), 82);
+  checa('Régua B · Geração de atas e pendências (3,5,5,4,3)',  prioridadeB(3, 5, 5, 4, 3), 79);
+
+  /* 4.2 Régua B — extremos */
+  checa('Régua B · extremo mínimo (tudo 1)', prioridadeB(1, 1, 1, 1, 1), 20);
+  checa('Régua B · extremo máximo (tudo 5)', prioridadeB(5, 5, 5, 5, 5), 100);
+  checa('Régua B · nota fora de escala devolve nulo', prioridadeB(6, 1, 1, 1, 1), null);
+
+  /* 4.3 Régua B — fronteiras das faixas */
+  checa('Faixa B · 100', (faixaB(100) || {}).rotulo, 'Fazer agora');
+  checa('Faixa B · 80',  (faixaB(80)  || {}).rotulo, 'Fazer agora');
+  checa('Faixa B · 79',  (faixaB(79)  || {}).rotulo, 'Preparar');
+  checa('Faixa B · 60',  (faixaB(60)  || {}).rotulo, 'Preparar');
+  checa('Faixa B · 59',  (faixaB(59)  || {}).rotulo, 'Não priorizar');
+  checa('Faixa B · 20',  (faixaB(20)  || {}).rotulo, 'Não priorizar');
+
+  /* 4.4 Régua A — severidade e fronteiras das faixas */
+  checa('Régua A · severidade P=3 × I=5', severidade(3, 5), 15);
+  checa('Régua A · faixa de P=3 × I=5', (faixaA(severidade(3, 5)) || {}).chave, 'alto');
+  checa('Faixa A · 25', (faixaA(25) || {}).chave, 'alto');
+  checa('Faixa A · 15', (faixaA(15) || {}).chave, 'alto');
+  checa('Faixa A · 12', (faixaA(12) || {}).chave, 'medio');
+  checa('Faixa A · 5',  (faixaA(5)  || {}).chave, 'medio');
+  checa('Faixa A · 4',  (faixaA(4)  || {}).chave, 'baixo');
+  checa('Faixa A · 1',  (faixaA(1)  || {}).chave, 'baixo');
+  checa('Faixa A · 0 é impossível e não recebe faixa', faixaA(0), null);
+  checa('Faixa A · 26 é impossível e não recebe faixa', faixaA(26), null);
+
+  /* 4.5 Régua A — todo produto P×I cai numa faixa (sem lacuna entre 12 e 15) */
+  var semFaixa = [], p, im, s;
+  for (p = 1; p <= 5; p++) {
+    for (im = 1; im <= 5; im++) {
+      s = severidade(p, im);
+      if (!faixaA(s)) semFaixa.push(p + '×' + im + '=' + s);
+    }
+  }
+  checa('Régua A · todo produto P×I alcançável tem faixa', semFaixa, []);
+
+  /* 4.6 Impacto por dimensão usa a maior nota */
+  checa('Impacto agregado usa a maior nota', impactoAgregado([2, 5, null]), 5);
+  checa('Impacto agregado sem nota devolve nulo', impactoAgregado([null, null, null]), null);
+
+  /* 4.7 Investigue */
+  checa('Investigue · severidade alta + dado baixo', precisaInvestigar(20, 'baixa'), true);
+  checa('Investigue · severidade alta + dado alto', precisaInvestigar(20, 'alta'), false);
+  checa('Investigue · severidade média + dado baixo', precisaInvestigar(12, 'baixa'), false);
+
+  /* 4.8 Corte obrigatório — dono */
+  checa('Dono vazio bloqueia', analisarDono('').estado, 'vazio');
+  checa('Dono “PMO” é genérico', analisarDono('PMO').estado, 'generico');
+  checa('Dono “a equipe” é genérico', analisarDono('a equipe').estado, 'generico');
+  checa('Dono “Ana Ribeiro” passa', analisarDono('Ana Ribeiro').estado, 'ok');
+
+  /* 4.9 Parser de CSV — campo entre aspas com vírgulas, e o catálogo real */
+  var amostra = 'a,b,c\n1,"x, com vírgula","aspas ""duplas"" aqui"\n2,simples,\n';
+  var p1 = parseCSV(amostra);
+  checa('Parser · número de registros', p1.registros.length, 2);
+  checa('Parser · campo entre aspas com vírgula', p1.registros[0].b, 'x, com vírgula');
+  checa('Parser · aspas escapadas', p1.registros[0].c, 'aspas "duplas" aqui');
+  checa('Parser · campo final vazio', p1.registros[1].c, '');
+  checa('Catálogo · 8 colunas', CATALOGO.colunas.length, 8);
+  checa('Catálogo · cabeçalho do CSV', CATALOGO.colunas.join('|'),
+        'id|tecnica|origem_pmbok|polaridade|pergunta_disparo|padrao_saida|serve_para|esforco');
+  checa('Catálogo · não está vazio', CATALOGO.registros.length > 0, true);
+  var t01 = tecnicaPorId('T01');
+  checa('Catálogo · T01 tem pergunta de disparo com vírgulas preservadas',
+        t01 ? t01.pergunta_disparo : null,
+        'Estamos 6 meses à frente e o projeto fracassou de forma acachapante. Escreva a manchete. O que deu errado?');
+  var colunasIrregulares = CATALOGO.registros.filter(function (r) { return r.__colunas !== 8; }).length;
+  checa('Catálogo · toda linha tem 8 campos', colunasIrregulares, 0);
+
+  /* O esquema do CSV governa a interface: `polaridade` decide a aba e `esforco`
+     decide a pré-seleção da sessão de 15 minutos. Valor inválido some da tela
+     em silêncio — por isso é checado, não presumido. */
+  var POLARIDADES = ['ameaca', 'oportunidade', 'ambas'];
+  var ESFORCOS = ['baixo', 'medio', 'alto'];
+  checa('Catálogo · toda polaridade é válida',
+        CATALOGO.registros.filter(function (t) { return POLARIDADES.indexOf(t.polaridade) === -1; })
+          .map(function (t) { return t.id + '=' + t.polaridade; }), []);
+  checa('Catálogo · todo esforço é válido',
+        CATALOGO.registros.filter(function (t) { return ESFORCOS.indexOf(t.esforco) === -1; })
+          .map(function (t) { return t.id + '=' + t.esforco; }), []);
+  checa('Catálogo · todo id é único e no formato Tnn',
+        CATALOGO.registros.filter(function (t, i, todos) {
+          return !/^T\d{2}$/.test(t.id) || todos.indexOf(t) !== i ||
+                 todos.map(function (x) { return x.id; }).indexOf(t.id) !== i;
+        }).map(function (t) { return t.id; }), []);
+  checa('Catálogo · toda técnica tem pergunta de disparo',
+        CATALOGO.registros.filter(function (t) { return !t.pergunta_disparo; }).length, 0);
+  /* Invariantes, não contagens. Acrescentar uma linha ao catálogo é o caminho de
+     contribuição que o README anuncia; travar o número de hoje faria essa
+     contribuição pintar a faixa vermelha na página publicada, dizendo ao usuário
+     final que os números não são confiáveis. A divergência que importa — linha no
+     metodo/tecnicas.csv que não entrou no bloco embutido — é do script
+     scripts/verificar-kernel.py, que compara os dois arquivos. */
+  checa('Catálogo · toda técnica aparece em ao menos uma aba',
+        CATALOGO.registros.filter(function (t) {
+          return tecnicasDe('ameaca').indexOf(t) === -1 && tecnicasDe('oportunidade').indexOf(t) === -1;
+        }).map(function (t) { return t.id; }), []);
+  checa('Catálogo · técnica “ambas” aparece nas duas abas',
+        CATALOGO.registros.filter(function (t) {
+          return t.polaridade === 'ambas' &&
+                 (tecnicasDe('ameaca').indexOf(t) === -1 || tecnicasDe('oportunidade').indexOf(t) === -1);
+        }).map(function (t) { return t.id; }), []);
+  checa('Catálogo · técnica de polaridade única não vaza para a outra aba',
+        CATALOGO.registros.filter(function (t) {
+          if (t.polaridade === 'ameaca') return tecnicasDe('oportunidade').indexOf(t) !== -1;
+          if (t.polaridade === 'oportunidade') return tecnicasDe('ameaca').indexOf(t) !== -1;
+          return false;
+        }).map(function (t) { return t.id; }), []);
+  checa('Catálogo · a sessão de 15 min tem técnica de esforço baixo nas duas abas',
+        [tecnicasDe('ameaca').some(function (t) { return t.esforco === 'baixo'; }),
+         tecnicasDe('oportunidade').some(function (t) { return t.esforco === 'baixo'; })].join(','),
+        'true,true');
+
+  /* 4.10 Gatilhos de HITL */
+  var itemTeste = novoItemCru();
+  itemTeste.probabilidade = 5; itemTeste.impPrazo = 5; itemTeste.qualidade = 'baixa';
+  itemTeste.estrategia = 'Aceitar';
+  checa('HITL · item 🔴 + dado baixo + Aceitar dispara 3 gatilhos',
+        gatilhosHITL(itemTeste).map(function (g) { return g.id; }).join(','), 'g1,g4,g6');
+
+  /* =====================================================================
+     4.11 Cenários da matriz de I/O que dependem do estado da sessão.
+
+     ATENÇÃO: este autoteste roda em produção a cada carga da página, antes
+     de carregar(). Nada aqui pode sujar a sessão real, escrever no
+     localStorage do usuário ou deixar o `estado` global alterado — por isso
+     tudo acontece sobre cópias, com uma loja de mentira no lugar do
+     localStorage, e é restaurado no `finally`. A checagem 4.12 confirma.
+     ===================================================================== */
+
+  var estadoAntes = JSON.stringify(estado);
+  var armazenamentoOkAntes = armazenamentoOk;
+  var armazenamentoMotivoAntes = armazenamentoMotivo;
+  var lojaRealLegivel = true, brutoAntes = null;
+  try { brutoAntes = window.localStorage.getItem(CHAVE_ARMAZENAMENTO); }
+  catch (e) { lojaRealLegivel = false; }
+
+  /* lojas de mentira: uma que funciona, uma que se recusa a gravar */
+  function lojaEmMemoria() {
+    var dados = {};
+    return {
+      dados: dados,
+      getItem: function (k) { return Object.prototype.hasOwnProperty.call(dados, k) ? dados[k] : null; },
+      setItem: function (k, v) { dados[k] = String(v); },
+      removeItem: function (k) { delete dados[k]; }
+    };
+  }
+  function lojaBloqueada() {
+    return {
+      getItem: function () { throw new Error('storage bloqueado'); },
+      setItem: function () { throw new Error('storage bloqueado'); },
+      removeItem: function () { throw new Error('storage bloqueado'); }
+    };
+  }
+
+  /* um item que satisfaz todos os cortes menos o dono, que vem por parâmetro */
+  function itemDeTeste(id, dono) {
+    var it = novoItemCru();
+    it.id = id;
+    it.causa = 'dependência de um único integrador para a carga de dados legados';
+    it.evento = 'estouro da janela de virada';
+    it.efeito = 'adiamento do go-live';
+    it.probabilidade = 5;
+    it.impCusto = 4;                 /* severidade 20 = faixa alta */
+    it.qualidade = 'media';
+    it.estrategia = 'Mitigar';
+    it.acao = 'Contratar segundo integrador até 15/09';
+    it.gatilho = 'Se a carga de teste não fechar até 01/09';
+    it.residual = 'Curva de aprendizado do novo integrador';
+    it.riscoSecundarioAvaliado = true;
+    it.dono = dono;
+    it.confirmacoes = { g1: '2026-08-21T12:00:00.000Z' };
+    it.decisao = 'aceite';
+    it.validadoEm = '2026-08-21T12:00:00.000Z';
+    return it;
+  }
+  /* Lê UMA linha de CSV com o separador do app. Existe para o teste conferir o
+     que saiu, sem confiar no mesmo código que gerou. */
+  function lerLinhaCSV(linha) {
+    var out = [], c = '', aspas = false, i, ch;
+    for (i = 0; i < linha.length; i++) {
+      ch = linha.charAt(i);
+      if (aspas) {
+        if (ch === '"') {
+          if (linha.charAt(i + 1) === '"') { c += '"'; i += 1; }
+          else aspas = false;
+        } else c += ch;
+      } else if (ch === '"') { aspas = true; }
+      else if (ch === SEP) { out.push(c); c = ''; }
+      else c += ch;
+    }
+    out.push(c);
+    return out;
+  }
+  function contaBloqueiosDeCorte(it) {
+    return bloqueiosDe(it).filter(function (b) {
+      return b.indexOf('Corte obrigatório') !== -1 && b.indexOf('dono da decisão humana') !== -1;
+    }).length;
+  }
+
+  try {
+    /* --- Matriz: "Enunciado incompleto" — causa ou efeito vazios ---------- */
+    var completo = novoItemCru();
+    completo.id = 'X01'; completo.causa = 'fornecedor único';
+    completo.evento = 'atraso na entrega'; completo.efeito = 'marco perdido';
+    var semCausa = novoItemCru();
+    semCausa.id = 'X02'; semCausa.evento = 'atraso na entrega'; semCausa.efeito = 'marco perdido';
+    var semEvento = novoItemCru();
+    semEvento.id = 'X03'; semEvento.causa = 'fornecedor único'; semEvento.efeito = 'marco perdido';
+    var semEfeito = novoItemCru();
+    semEfeito.id = 'X04'; semEfeito.causa = 'fornecedor único'; semEfeito.evento = 'atraso na entrega';
+
+    checa('Enunciado completo não é rascunho', ehRascunho(completo), false);
+    checa('Enunciado sem causa é rascunho', ehRascunho(semCausa), true);
+    checa('Enunciado sem evento é rascunho', ehRascunho(semEvento), true);
+    checa('Enunciado sem efeito é rascunho', ehRascunho(semEfeito), true);
+    checa('Campo só com espaços não preenche o enunciado',
+          ehRascunho({ causa: '   ', evento: 'x', efeito: 'y' }), true);
+    checa('Rascunho aponta o campo faltante (causa)', faltasDoEnunciado(semCausa).join(','), 'causa');
+    checa('Rascunho aponta o campo faltante (evento)', faltasDoEnunciado(semEvento).join(','), 'evento incerto');
+    checa('Rascunho aponta o campo faltante (efeito)', faltasDoEnunciado(semEfeito).join(','), 'efeito no objetivo');
+
+    estado.itens = [completo, semCausa, semEvento, semEfeito];
+    checa('Rascunho não é priorizável',
+          itensPriorizaveis().map(function (i) { return i.id; }).join(','), 'X01');
+    checa('Rascunho continua registrado', estado.itens.length, 4);
+
+    /* --- Matriz: "Sessão sem contexto" — 5 colunas vazias ---------------- */
+    estado.enquadramento = { contexto: '', dor: '', dados: '', riscos: '', valor: '' };
+    checa('Enquadramento vazio: Identificar indisponível', enquadramentoCompleto(), false);
+    estado.enquadramento = { contexto: 'ERP', dor: 'd', dados: 'da', riscos: 'r', valor: '' };
+    checa('Enquadramento com 4 de 5: ainda indisponível', enquadramentoCompleto(), false);
+    estado.enquadramento = { contexto: 'ERP', dor: 'd', dados: 'da', riscos: 'r', valor: '   ' };
+    checa('Coluna só com espaços não conta como preenchida', enquadramentoCompleto(), false);
+    estado.enquadramento = { contexto: 'ERP', dor: 'd', dados: 'da', riscos: 'r', valor: 'v' };
+    checa('Enquadramento com as 5 colunas: Identificar disponível', enquadramentoCompleto(), true);
+
+    /* --- Matriz: "Export vazio" — zero itens ----------------------------- */
+    estado.itens = [];
+    checa('Zero itens: exportação desabilitada', exportacaoDisponivel(), false);
+    estado.itens = [completo];
+    checa('Com um item: exportação habilitada', exportacaoDisponivel(), true);
+
+    /* --- Matriz: "Recarregar a página" — sessão restaurada na mesma etapa - */
+    var memoria = lojaEmMemoria();
+    lojaDeTeste = memoria;
+    armazenamentoOk = true;
+    estado = sessaoNova();
+    estado.etapa = 4;
+    estado.abaResponder = 'reguab';
+    estado.abaIdentificar = 'oportunidade';
+    estado.enquadramento = { contexto: 'ERP', dor: 'd', dados: 'da', riscos: 'r', valor: 'v' };
+    estado.seq = 7;
+    estado.itens = [itemDeTeste('R007', 'Ana Ribeiro')];
+    salvar();
+    checa('Sessão foi persistida pela mesma serialização de salvar()',
+          typeof memoria.dados[CHAVE_ARMAZENAMENTO], 'string');
+
+    estado = sessaoNova();                 /* simula a página recarregando do zero */
+    checa('Antes de carregar, a sessão está zerada', estado.etapa, 1);
+    carregar();
+    checa('Recarregar restaura a etapa', estado.etapa, 4);
+    checa('Recarregar restaura a aba da Etapa 4', estado.abaResponder, 'reguab');
+    checa('Recarregar restaura a aba da Etapa 2', estado.abaIdentificar, 'oportunidade');
+    checa('Recarregar restaura o enquadramento', estado.enquadramento.contexto, 'ERP');
+    checa('Recarregar restaura os itens', estado.itens.length, 1);
+    checa('Recarregar restaura os campos do item',
+          [estado.itens[0].id, estado.itens[0].probabilidade, estado.itens[0].dono].join('|'),
+          'R007|5|Ana Ribeiro');
+    checa('Recarregar restaura o cálculo derivado', severidadeDoItem(estado.itens[0]), 20);
+    checa('Recarregar restaura as confirmações de HITL',
+          !!estado.itens[0].confirmacoes.g1, true);
+    checa('Recarregar restaura o contador de ids', estado.seq, 7);
+    checa('Sessão corrompida não vira sessão', desserializarSessao('{isso não é json'), null);
+    var antiga = desserializarSessao('{"itens":[{"id":"R001"}]}');
+    checa('Item antigo ganha os campos novos ao ser restaurado', antiga.itens[0].qualidade, '');
+    checa('Item antigo ganha confirmacoes ao ser restaurado',
+          typeof antiga.itens[0].confirmacoes, 'object');
+
+    /* --- Matriz: "localStorage indisponível" — janela anônima ------------ */
+    lojaDeTeste = lojaBloqueada();
+    armazenamentoOk = true;
+    var itensAntesDaFalha = estado.itens.length;
+    var lancouAoSalvar = false;
+    try { salvar(); } catch (e) { lancouAoSalvar = true; }
+    checa('salvar() não propaga exceção com storage bloqueado', lancouAoSalvar, false);
+    checa('storage bloqueado marca armazenamentoOk como falso', armazenamentoOk, false);
+    checa('Sessão em memória sobrevive ao storage bloqueado', estado.itens.length, itensAntesDaFalha);
+
+    armazenamentoOk = true;
+    var lancouAoCarregar = false;
+    try { carregar(); } catch (e) { lancouAoCarregar = true; }
+    checa('carregar() não propaga exceção com storage bloqueado', lancouAoCarregar, false);
+    checa('carregar() com storage bloqueado marca armazenamentoOk como falso', armazenamentoOk, false);
+
+    lojaDeTeste = null;
+
+    /* --- Matriz: "Gate HITL — sem dono" ---------------------------------- */
+    estado = sessaoNova();
+    estado.enquadramento = { contexto: 'ERP', dor: 'd', dados: 'da', riscos: 'r', valor: 'v' };
+    var semDono = itemDeTeste('R001', '');
+    estado.itens = [semDono];
+    checa('Item sem dono · severidade 20', severidadeDoItem(semDono), 20);
+    checa('Item sem dono · faixa alta', (faixaA(severidadeDoItem(semDono)) || {}).chave, 'alto');
+    checa('Item 🔴 sem dono não pode ser encerrado', podeEncerrar(semDono), false);
+    checa('Item 🔴 sem dono é pendente de dono', pendenteDeDono(semDono), true);
+    checa('O bloqueio nomeia o corte obrigatório', contaBloqueiosDeCorte(semDono), 1);
+    checa('Item sem dono vai para a seção Pendente de dono no export',
+          linhaExport(semDono).secao, 'Pendente de dono');
+    checa('Status do item sem dono', statusDe(semDono), 'Pendente de dono');
+
+    var comDono = itemDeTeste('R002', 'Ana Ribeiro');
+    checa('Item 🔴 com dono e gatilho confirmado pode ser encerrado', podeEncerrar(comDono), true);
+    checa('Item com dono não é pendente de dono', pendenteDeDono(comDono), false);
+    checa('Item com dono vai para a seção Registro de riscos no export',
+          linhaExport(comDono).secao, 'Registro de riscos');
+    comDono.confirmacoes = {};
+    checa('Item 🔴 com gatilho de HITL não confirmado volta a bloquear', podeEncerrar(comDono), false);
+
+    /* --- Precedência de status: o corte vem antes do carimbo ------------- */
+    var encerradoSemDono = itemDeTeste('R010', 'Ana Ribeiro');
+    encerradoSemDono.encerrado = true;
+    checa('Status · item encerrado com dono é Encerrado', statusDe(encerradoSemDono), 'Encerrado');
+    encerradoSemDono.dono = '';
+    checa('Status · item que perde o dono volta a Pendente de dono, mesmo encerrado',
+          statusDe(encerradoSemDono), 'Pendente de dono');
+    checa('Status · e a linha não se contradiz: seção e status concordam',
+          [linhaExport(encerradoSemDono).secao, linhaExport(encerradoSemDono).status].join(' / '),
+          'Pendente de dono / Pendente de dono');
+
+    /* --- Editar item encerrado revalida o encerramento -------------------- */
+    var reaberto = itemDeTeste('R011', 'Ana Ribeiro');
+    reaberto.encerrado = true;
+    reaberto.validadoEm = '2026-08-21T12:00:00.000Z';
+    checa('Revalidação · item íntegro continua encerrado',
+          normalizarItem(reaberto) && reaberto.encerrado, true);
+    reaberto.dono = '';
+    normalizarItem(reaberto);
+    checa('Revalidação · perder o dono reabre o item encerrado', reaberto.encerrado, false);
+    checa('Revalidação · e o carimbo de validação vai junto', reaberto.validadoEm, '');
+
+    var reaberto2 = itemDeTeste('R012', 'Ana Ribeiro');
+    reaberto2.encerrado = true;
+    reaberto2.efeito = '';   /* vira rascunho */
+    normalizarItem(reaberto2);
+    checa('Revalidação · enunciado incompleto também reabre', reaberto2.encerrado, false);
+
+    /* --- Confirmação de HITL não sobrevive ao gatilho que a gerou --------- */
+    var vaiEVolta = itemDeTeste('R013', 'Ana Ribeiro');
+    vaiEVolta.estrategia = 'Evitar';
+    normalizarItem(vaiEVolta);
+    vaiEVolta.confirmacoes.g2 = '2026-08-21T12:00:00.000Z';
+    checa('HITL · com Evitar, o gatilho g2 existe e aceita confirmação',
+          !!vaiEVolta.confirmacoes.g2 && assinaturaDosGatilhos(vaiEVolta).indexOf('g2') !== -1, true);
+    vaiEVolta.estrategia = 'Mitigar';
+    normalizarItem(vaiEVolta);
+    checa('HITL · trocar para Mitigar descarta a confirmação de g2',
+          vaiEVolta.confirmacoes.g2 === undefined, true);
+    vaiEVolta.estrategia = 'Evitar';
+    normalizarItem(vaiEVolta);
+    checa('HITL · e ao voltar para Evitar o gatilho volta SEM confirmação',
+          [assinaturaDosGatilhos(vaiEVolta).indexOf('g2') !== -1, !!vaiEVolta.confirmacoes.g2].join(','),
+          'true,false');
+    checa('HITL · logo o item volta a bloquear o encerramento', podeEncerrar(vaiEVolta), false);
+
+    /* --- Campo condicional não sobrevive à troca de estratégia ------------ */
+    var trocaEstrategia = itemDeTeste('R014', 'Ana Ribeiro');
+    trocaEstrategia.estrategia = 'Aceitar';
+    trocaEstrategia.justificativa = 'custo do tratamento maior que o do impacto';
+    normalizarItem(trocaEstrategia);
+    checa('Estratégia · Aceitar mantém a justificativa',
+          trocaEstrategia.justificativa !== '', true);
+    trocaEstrategia.estrategia = 'Escalar';
+    trocaEstrategia.destinatario = 'Cláudia Meireles';
+    normalizarItem(trocaEstrategia);
+    checa('Estratégia · trocar para Escalar limpa a justificativa de Aceitar',
+          trocaEstrategia.justificativa, '');
+    checa('Estratégia · e o export não carrega o campo obsoleto',
+          linhaExport(trocaEstrategia).justificativa_aceitar, '');
+    trocaEstrategia.estrategia = 'Mitigar';
+    normalizarItem(trocaEstrategia);
+    checa('Estratégia · trocar para Mitigar limpa o destinatário de Escalar',
+          [trocaEstrategia.destinatario, linhaExport(trocaEstrategia).destinatario_escalar].join('|'), '|');
+    var evitar = itemDeTeste('R015', 'Ana Ribeiro');
+    evitar.estrategia = 'Evitar';
+    evitar.replanejamento = 'replanejar a janela de virada';
+    normalizarItem(evitar);
+    checa('Estratégia · Evitar mantém a pendência de replanejamento', evitar.replanejamento !== '', true);
+    evitar.estrategia = 'Transferir';
+    normalizarItem(evitar);
+    checa('Estratégia · trocar para Transferir limpa a pendência de replanejamento',
+          evitar.replanejamento, '');
+
+    /* --- Risco secundário: estados contraditórios não sobrevivem ---------- */
+    var contraditorio = itemDeTeste('R016', 'Ana Ribeiro');
+    contraditorio.riscoSecundarioAvaliado = true;
+    contraditorio.riscoSecundario = 'conflito entre integradores';
+    contraditorio.riscoSecundarioFaixa = 'alto';
+    normalizarItem(contraditorio, false);
+    checa('Risco secundário · marcar “não há” limpa o texto e a faixa',
+          [contraditorio.riscoSecundario, contraditorio.riscoSecundarioFaixa,
+           contraditorio.riscoSecundarioAvaliado].join('|'), '||true');
+    var contraditorio2 = itemDeTeste('R017', 'Ana Ribeiro');
+    contraditorio2.riscoSecundarioAvaliado = true;
+    contraditorio2.riscoSecundario = 'conflito entre integradores';
+    contraditorio2.riscoSecundarioFaixa = 'alto';
+    normalizarItem(contraditorio2, true);
+    checa('Risco secundário · descrever um risco desmarca “não há”',
+          contraditorio2.riscoSecundarioAvaliado, false);
+    checa('Risco secundário · e aí o gatilho g5 dispara de verdade',
+          assinaturaDosGatilhos(contraditorio2).indexOf('g5') !== -1, true);
+    checa('Risco secundário · a Regra 4 e o gatilho g5 nunca se contradizem',
+          regrasConsistencia(contraditorio2).filter(function (r) { return r.n === 4; })[0].ok, true);
+
+    /* --- Dono: nome de pessoa não pode ser acusado de ser área ------------ */
+    ['Ti Nguyen', 'Rh Costa', 'Na Silva', 'Zé', 'Jô', 'Ed', 'Bo Chen',
+     'Ana Ribeiro', 'João da Silva', 'Maria (PMO)'].forEach(function (nome) {
+      checa('Dono · “' + nome + '” é aceito como pessoa', analisarDono(nome).estado, 'ok');
+    });
+    ['PMO', 'TI', 'RH', 'a equipe', 'Equipe de dados', 'A área', 'Comitê de mudanças',
+     'diretoria', 'a definir', 'N/A'].forEach(function (nome) {
+      checa('Dono · “' + nome + '” é área, não pessoa', analisarDono(nome).estado, 'generico');
+    });
+    checa('Dono · o registro de quem é pessoa não carrega observação',
+          linhaExport(itemDeTeste('R018', 'Ti Nguyen')).observacao_dono, '');
+
+    /* --- Sessão: reconciliação de seq e saneamento de domínio ------------- */
+    var comItens = desserializarSessao(
+      '{"itens":[{"id":"R001"},{"id":"R007"},{"id":"R003"}]}');
+    checa('Sessão · seq reconcilia com o maior id presente', comItens.seq, 7);
+    var seqBaixo = desserializarSessao('{"seq":1,"itens":[{"id":"R009"}]}');
+    checa('Sessão · seq menor que o maior id é corrigido', seqBaixo.seq, 9);
+    var seqAlto = desserializarSessao('{"seq":40,"itens":[{"id":"R002"}]}');
+    checa('Sessão · seq maior que o maior id é preservado', seqAlto.seq, 40);
+
+    var sujo = desserializarSessao(JSON.stringify({
+      etapa: 99, abaIdentificar: 'xpto', abaResponder: 'nada', conduzidaPor: 42,
+      itens: [{ id: 'R001', polaridade: 'roxo', qualidade: 'excelente', decisao: 'talvez',
+                probabilidade: 9, impPrazo: 'muito', bImpacto: -3,
+                riscoSecundarioFaixa: 'gigante', estrategia: 'Teletransportar', encerrado: 'sim' }]
+    }));
+    checa('Sessão · etapa fora de 1–5 volta para 1', sujo.etapa, 1);
+    checa('Sessão · aba fora do domínio volta ao padrão',
+          [sujo.abaIdentificar, sujo.abaResponder].join(','), 'ameaca,respostas');
+    checa('Sessão · campo de texto não-string vira string vazia', sujo.conduzidaPor, '');
+    checa('Sessão · polaridade fora do domínio volta ao padrão', sujo.itens[0].polaridade, 'ameaca');
+    checa('Sessão · qualidade e decisão fora do domínio são descartadas',
+          [sujo.itens[0].qualidade, sujo.itens[0].decisao].join('|'), '|');
+    checa('Sessão · nota fora de 1–5 vira nulo',
+          [sujo.itens[0].probabilidade, sujo.itens[0].impPrazo, sujo.itens[0].bImpacto].join(','), ',,');
+    checa('Sessão · estratégia inexistente é descartada', sujo.itens[0].estrategia, '');
+    checa('Sessão · faixa de risco secundário fora do domínio é descartada',
+          sujo.itens[0].riscoSecundarioFaixa, '');
+    checa('Sessão · booleano só é verdadeiro se for booleano', sujo.itens[0].encerrado, false);
+    checa('Sessão · estratégia de ameaça não vale para item de oportunidade',
+          desserializarSessao('{"itens":[{"id":"R001","polaridade":"oportunidade","estrategia":"Mitigar"}]}')
+            .itens[0].estrategia, '');
+    checa('Sessão · estratégia válida da polaridade é preservada',
+          desserializarSessao('{"itens":[{"id":"R001","polaridade":"oportunidade","estrategia":"Melhorar"}]}')
+            .itens[0].estrategia, 'Melhorar');
+
+    /* --- Sessão virgem não cria registro no navegador de quem só olhou ---- */
+    var memVirgem = lojaEmMemoria();
+    lojaDeTeste = memVirgem;
+    armazenamentoOk = true; armazenamentoMotivo = '';
+    estado = sessaoNova();
+    salvar();
+    checa('Sessão · abrir a página não grava nada no armazenamento',
+          memVirgem.dados[CHAVE_ARMAZENAMENTO] === undefined, true);
+    estado.enquadramento.contexto = 'ERP';
+    salvar();
+    checa('Sessão · a primeira entrada do usuário já é gravada',
+          typeof memVirgem.dados[CHAVE_ARMAZENAMENTO], 'string');
+
+    /* --- Armazenamento: diagnóstico e recuperação ------------------------- */
+    var cheia = lojaBloqueada();
+    cheia.setItem = function () { var e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; };
+    lojaDeTeste = cheia;
+    armazenamentoOk = true; armazenamentoMotivo = '';
+    salvar();
+    checa('Armazenamento · quota estourada é diagnosticada como “cheio”', armazenamentoMotivo, 'cheio');
+    lojaDeTeste = lojaBloqueada();
+    armazenamentoOk = true; armazenamentoMotivo = '';
+    salvar();
+    checa('Armazenamento · storage bloqueado é diagnosticado como “bloqueado”', armazenamentoMotivo, 'bloqueado');
+    checa('Armazenamento · e os dois remédios são diferentes',
+          diagnosticarArmazenamento({ name: 'QuotaExceededError' }) !==
+          diagnosticarArmazenamento({ name: 'SecurityError' }), true);
+    /* recuperação: com o storage de volta, a próxima gravação volta a valer */
+    lojaDeTeste = lojaEmMemoria();
+    salvar();
+    checa('Armazenamento · a gravação volta sozinha quando o storage volta',
+          [armazenamentoOk, armazenamentoMotivo].join('|'), 'true|');
+    lojaDeTeste = null;
+
+    /* --- O cartão da Etapa 2 ensina a regra de rascunho ------------------
+       É o único lugar onde o app explica o que é rascunho. Se a pílula, a borda
+       e o aviso não acompanharem a digitação, ele ensina errado. Renderizado num
+       contêiner temporário fora da tela e removido em seguida. */
+    var caixa = document.createElement('div');
+    caixa.style.display = 'none';
+    document.body.appendChild(caixa);
+    try {
+      var itemI2 = novoItemCru();
+      itemI2.id = 'R030';
+      itemI2.causa = 'fornecedor único';
+      itemI2.evento = 'atraso na entrega';
+      estado.itens = [itemI2];
+      caixa.innerHTML = cartaoItemSimples(itemI2);
+      renderCartaoI2(itemI2);
+      var cartaoI2 = caixa.querySelector('[data-cartao-i2="R030"]');
+      checa('Cartão · rascunho recebe a borda tracejada já na primeira renderização',
+            cartaoI2.className, 'item rascunho');
+      checa('Cartão · rascunho mostra a pílula Rascunho',
+            cartaoI2.querySelector('[data-pilula-i2]').textContent, 'Rascunho');
+      checa('Cartão · rascunho nomeia o campo que falta',
+            /efeito no objetivo/.test(cartaoI2.querySelector('[data-nota-i2]').textContent), true);
+      checa('Cartão · o enunciado aparece na primeira renderização, não só ao editar',
+            cartaoI2.querySelector('.enunciado').textContent.indexOf('Devido a fornecedor único') === 0, true);
+
+      itemI2.efeito = 'marco perdido';
+      renderCartaoI2(itemI2);
+      checa('Cartão · completar o efeito tira a borda de rascunho', cartaoI2.className, 'item');
+      checa('Cartão · e tira a pílula Rascunho',
+            cartaoI2.querySelector('[data-pilula-i2]').textContent, '');
+      checa('Cartão · e tira o aviso de campo faltante',
+            cartaoI2.querySelector('[data-nota-i2]').textContent, '');
+      checa('Cartão · e o enunciado acompanha',
+            /marco perdido/.test(cartaoI2.querySelector('.enunciado').textContent), true);
+    } finally {
+      caixa.parentNode.removeChild(caixa);
+    }
+
+    /* --- Promoção do risco secundário: rastreável e idempotente ---------- */
+    var origemP = itemDeTeste('R020', 'Ana Ribeiro');
+    origemP.riscoSecundario = 'conflito de responsabilidade entre integradores';
+    origemP.riscoSecundarioAvaliado = false;
+    var promovido = criarItemDeRiscoSecundario(origemP, 'R021');
+    checa('Promoção · o item novo aponta para a origem', promovido.origemRiscoSecundario, 'R020');
+    checa('Promoção · o evento do item novo é o risco secundário descrito',
+          promovido.evento, 'conflito de responsabilidade entre integradores');
+    checa('Promoção · a causa cita a resposta escolhida',
+          promovido.causa, 'ter escolhido a resposta “Contratar segundo integrador até 15/09” para R020');
+    checa('Promoção · herda a polaridade e a técnica da origem',
+          [promovido.polaridade, promovido.tecnica].join('|'), [origemP.polaridade, origemP.tecnica].join('|'));
+
+    var semAcao = itemDeTeste('R022', 'Ana Ribeiro');
+    semAcao.acao = '';
+    semAcao.riscoSecundario = 'algo pode dar errado';
+    var promovidoSemAcao = criarItemDeRiscoSecundario(semAcao, 'R023');
+    checa('Promoção · sem ação descrita, a causa não fica com um buraco no meio',
+          promovidoSemAcao.causa.indexOf('“”') === -1, true);
+    checa('Promoção · e diz explicitamente que a ação não foi descrita',
+          /ação ainda não descrita/.test(promovidoSemAcao.causa), true);
+
+    origemP.promovidoPara = promovido.id;
+    estado.itens = [origemP, promovido];
+    checa('Promoção · o export liga a origem ao item gerado',
+          linhaExport(origemP).risco_secundario_promovido_para, 'R021');
+    checa('Promoção · e o item gerado aponta de volta',
+          linhaExport(promovido).origem_risco_secundario, 'R020');
+    checa('Promoção · as duas colunas existem no cabeçalho do CSV',
+          ['risco_secundario_promovido_para', 'origem_risco_secundario']
+            .filter(function (c) { return COLUNAS_EXPORT.indexOf(c) === -1; }), []);
+
+    /* --- Versão das regras: não inventar marcador que o kernel não tem ---- */
+    checa('Versão · o registro diz que o kernel não declara versão',
+          /não declara versão própria/.test(VERSAO_DAS_REGRAS), true);
+    checa('Versão · e nomeia a versão do app, que é o que fixa as regras',
+          VERSAO_DAS_REGRAS.indexOf(APP_VERSAO) !== -1, true);
+
+    /* --- Matriz: "Gate HITL — dono não-pessoa" --------------------------- */
+    checa('Dono “PMO” é genérico', analisarDono('PMO').estado, 'generico');
+    checa('Dono “a equipe” é genérico', analisarDono('a equipe').estado, 'generico');
+    checa('Dono “equipe de dados” é genérico', analisarDono('equipe de dados').estado, 'generico');
+    var donoGenerico = itemDeTeste('R003', 'PMO');
+    checa('Dono genérico não gera bloqueio de corte obrigatório', contaBloqueiosDeCorte(donoGenerico), 0);
+    checa('Dono genérico não impede o encerramento', podeEncerrar(donoGenerico), true);
+    checa('Dono genérico não é pendente de dono', pendenteDeDono(donoGenerico), false);
+    checa('Dono genérico entra no Registro de riscos, não em Pendente de dono',
+          linhaExport(donoGenerico).secao, 'Registro de riscos');
+    checa('Dono genérico sai com a observação de aviso no export',
+          /pessoa nomeada/.test(linhaExport(donoGenerico).observacao_dono), true);
+    checa('Dono nomeado não gera observação no export',
+          linhaExport(itemDeTeste('R004', 'Ana Ribeiro')).observacao_dono, '');
+    checa('Aviso de dono genérico difere do bloqueio de dono vazio: só o vazio bloqueia',
+          [podeEncerrar(donoGenerico), podeEncerrar(itemDeTeste('R005', ''))].join('|'), 'true|false');
+
+
+    /* --- (8) A SERIALIZAÇÃO DO EXPORT -----------------------------------
+       O registro exportado é o produto final: é ele que vai para o comitê. Até
+       aqui nenhuma checagem lia o texto que gerarCSV() e gerarMarkdown()
+       produzem — dava para trocar o separador, remover um elo da rastreabilidade
+       ou desligar a citação de campos e a suíte continuava verde. */
+    estado = sessaoNova();
+    estado.enquadramento = { contexto: 'ERP; unidade "Norte"', dor: 'd', dados: 'da', riscos: 'r', valor: 'v' };
+    estado.conduzidaPor = 'Filipe Torres';
+
+    var comDonoX = itemDeTeste('R001', 'Ana Ribeiro');
+    /* campo com separador, aspas, quebra de linha e prefixo de fórmula */
+    comDonoX.acao = '=SOMA(A1:A9); "urgente"\nsegunda linha';
+    comDonoX.bImpacto = 5; comDonoX.bViabilidade = 4; comDonoX.bDados = 4;
+    comDonoX.bSeguranca = 4; comDonoX.bValor = 5;
+    var semDonoX = itemDeTeste('R002', '');
+    semDonoX.bImpacto = 5; semDonoX.bViabilidade = 5; semDonoX.bDados = 5;
+    semDonoX.bSeguranca = 5; semDonoX.bValor = 5;
+    /* ordem de entrada invertida de propósito: o export tem de reordenar */
+    estado.itens = [semDonoX, comDonoX];
+
+    var csv = gerarCSV();
+    var linhasCsv = csv.split('\r\n');
+    var cabecalho = linhasCsv[0];
+
+    checa('Export CSV · cabeçalho é COLUNAS_EXPORT unidas pelo separador',
+          cabecalho, COLUNAS_EXPORT.join(SEP));
+    checa('Export CSV · separador é ponto e vírgula (Excel em português)', SEP, ';');
+    checa('Export CSV · uma linha de cabeçalho e uma por item',
+          linhasCsv.filter(function (l) { return l !== ''; }).length, 3);
+    checa('Export CSV · termina em CRLF', /\r\n$/.test(csv), true);
+    checa('Export CSV · os 5 elos de rastreabilidade estão no cabeçalho',
+          ['elo_entrada', 'elo_processamento', 'elo_saida', 'elo_validacao', 'elo_registro']
+            .filter(function (c) { return cabecalho.split(SEP).indexOf(c) === -1; }), []);
+    checa('Export CSV · toda coluna declarada aparece no cabeçalho',
+          COLUNAS_EXPORT.filter(function (c) { return cabecalho.split(SEP).indexOf(c) === -1; }), []);
+
+    var celulas = lerLinhaCSV(linhasCsv[1]);
+    var celulasPorNome = {};
+    COLUNAS_EXPORT.forEach(function (c, i) { celulasPorNome[c] = celulas[i]; });
+
+    checa('Export CSV · a linha tem tantas células quanto colunas', celulas.length, COLUNAS_EXPORT.length);
+    checa('Export CSV · item com dono vem antes do item sem dono',
+          celulasPorNome.id, 'R001');
+    checa('Export CSV · item com dono na seção Registro de riscos',
+          celulasPorNome.secao, 'Registro de riscos');
+    checa('Export CSV · prefixo de fórmula neutralizado com apóstrofo',
+          celulasPorNome.acao.charAt(0), "'");
+    checa('Export CSV · o texto do campo sobrevive à neutralização',
+          celulasPorNome.acao.indexOf('=SOMA(A1:A9); "urgente"') !== -1, true);
+    checa('Export CSV · campo com separador e aspas volta íntegro do parser',
+          celulasPorNome.acao, "'" + comDonoX.acao);
+    checa('Export CSV · campo com aspas foi escapado no texto bruto',
+          linhasCsv[1].indexOf('""urgente""') !== -1, true);
+    checa('Export CSV · campo com separador foi citado',
+          linhasCsv[1].indexOf('"\'=SOMA(A1:A9); ""urgente""') !== -1, true);
+    checa('Export CSV · contexto com aspas e separador também é citado',
+          celulasPorNome.contexto, 'ERP; unidade "Norte"');
+
+    var celulasSem = lerLinhaCSV(csv.split('\r\n')[2]);
+    var semPorNome = {};
+    COLUNAS_EXPORT.forEach(function (c, i) { semPorNome[c] = celulasSem[i]; });
+    checa('Export CSV · item sem dono vai para a seção Pendente de dono',
+          semPorNome.secao, 'Pendente de dono');
+    checa('Export CSV · a string “Pendente de dono” existe no arquivo',
+          csv.indexOf('Pendente de dono') !== -1, true);
+    checa('Export CSV · item sem dono não recebe nota da Régua B (o corte vale antes)',
+          [semPorNome.regua_b_prioridade, semPorNome.regua_b_impacto].join('|'), '|');
+    checa('Export CSV · item sem dono diz por que foi devolvido',
+          /Devolvido/.test(semPorNome.faixa_regua_b), true);
+    checa('Export CSV · item COM dono recebe a nota da Régua B',
+          celulasPorNome.regua_b_prioridade, '89');
+
+    checa('Export CSV · neutraliza os seis prefixos de fórmula',
+          PREFIXOS_DE_FORMULA.map(function (c) { return neutralizarFormula(c + 'x').charAt(0); }).join(''),
+          "''''''");
+    checa('Export CSV · texto comum não é alterado', neutralizarFormula('Ana Ribeiro'), 'Ana Ribeiro');
+    checa('Export CSV · campo vazio continua vazio', neutralizarFormula(''), '');
+    checa('Export CSV · campo com ponto e vírgula é citado', campoCSV('a;b'), '"a;b"');
+    checa('Export CSV · campo com aspas é escapado', campoCSV('diz "oi"'), '"diz ""oi""' + '"');
+    checa('Export CSV · campo com quebra de linha é citado', campoCSV('a\nb'), '"a\nb"');
+
+    /* ordenação por número, não por texto: R1000 depois de R999 */
+    checa('Export CSV · ordena id por número, não por texto',
+          [numeroDoId('R002'), numeroDoId('R999'), numeroDoId('R1000')].join(','), '2,999,1000');
+
+    var md = gerarMarkdown();
+    checa('Export Markdown · título do registro',
+          md.split('\n')[0].indexOf('# Registro de riscos') === 0, true);
+    checa('Export Markdown · as seções obrigatórias estão presentes',
+          ['## Enquadramento', '## Validação humana', '## Registro de riscos (Régua A',
+           '## Pendente de dono', '## Desempate de respostas (Régua B',
+           '## Pendências de replanejamento', '## Riscos secundários levantados',
+           '## Rastreabilidade', '## Limites da ferramenta']
+            .filter(function (t) { return md.indexOf(t) === -1; }), []);
+    checa('Export Markdown · a nota de colapso do fluxo de validação está no registro',
+          md.indexOf(NOTA_COLAPSO) !== -1, true);
+    checa('Export Markdown · o corte obrigatório é citado literalmente',
+          md.indexOf(CORTE_OBRIGATORIO) !== -1, true);
+    checa('Export Markdown · os 5 elos aparecem na rastreabilidade',
+          ['| **Entrada** |', '| **Processamento** |', '| **Saída** |', '| **Validação** |', '| **Registro** |']
+            .filter(function (t) { return md.indexOf(t) === -1; }), []);
+    checa('Export Markdown · item sem dono não é pontuado pela Régua B',
+          md.indexOf('| R002 |') !== -1 && /\| 2 \| R002 \|/.test(md), false);
+    checa('Export Markdown · escapa a barra vertical, que quebraria a tabela',
+          mdEscapa('a|b'), 'a\\|b');
+    checa('Export Markdown · achata quebra de linha, que quebraria a linha da tabela',
+          mdEscapa('a\nb'), 'a b');
+    checa('Export Markdown · a barra vertical do campo não vaza para a tabela',
+          md.indexOf('=SOMA(A1:A9); "urgente" segunda linha') !== -1, true);
+
+    checa('Export · nome de arquivo traz a extensão pedida',
+          [/\.csv$/.test(nomeArquivo('csv')), /\.md$/.test(nomeArquivo('md'))].join(','), 'true,true');
+    checa('Export · nome de arquivo inclui data e hora, para dois exports não colidirem',
+          /-\d{8}-\d{4}\.(csv|md)$/.test(nomeArquivo('csv')), true);
+
+    /* tentarBaixar() só pode declarar que ACIONOU a API. Se ela falhar, o app tem
+       de oferecer a cópia manual — é o caminho de Safari e file://. Trocar Blob
+       por um que lança testa isso sem disparar download nenhum. */
+    /* Caminho feliz: o download é montado com o nome certo e um blob de verdade.
+       Verificável sem baixar nada, porque montar e clicar são passos separados. */
+    var ancora = prepararDownload('registro.csv', 'a;b', 'text/csv', true);
+    checa('Export · o download é montado com o nome do arquivo',
+          ancora.getAttribute('download'), 'registro.csv');
+    checa('Export · o download aponta para um blob local, não para a rede',
+          ancora.getAttribute('href').slice(0, 5), 'blob:');
+    try { URL.revokeObjectURL(ancora.href); } catch (eRev) { /* ignorado */ }
+
+    /* Caminho infeliz: se a montagem falhar, tentarBaixar devolve false para o
+       app oferecer a cópia manual em vez de anunciar um sucesso que não houve. */
+    var BlobReal = window.Blob;
+    try {
+      window.Blob = function () { throw new Error('Blob indisponível'); };
+      checa('Export · download que falha devolve false, para o app oferecer a cópia',
+            tentarBaixar('x.csv', 'a;b', 'text/csv', false), false);
+    } catch (eBlob) {
+      checa('Export · download que falha devolve false, para o app oferecer a cópia',
+            'não foi possível substituir Blob: ' + eBlob.message, 'substituição de Blob possível');
+    } finally { window.Blob = BlobReal; }
+
+    /* --- Régua A e Régua B nunca somadas: colunas separadas e rotuladas --- */
+    checa('Export · as duas réguas ocupam colunas distintas e rotuladas',
+          [COLUNAS_EXPORT.indexOf('faixa_regua_a') !== -1,
+           COLUNAS_EXPORT.indexOf('faixa_regua_b') !== -1].join(','), 'true,true');
+
+  } catch (e) {
+    total += 1;
+    falhas.push('Cenário da matriz de I/O lançou exceção — ' + (e && e.message ? e.message : e));
+  } finally {
+    /* devolve tudo ao que era antes do autoteste, aconteça o que acontecer */
+    estado = JSON.parse(estadoAntes);
+    lojaDeTeste = null;
+    armazenamentoOk = armazenamentoOkAntes;
+    armazenamentoMotivo = armazenamentoMotivoAntes;
+    marcarArmazenamento();
+  }
+
+  /* --- 4.12 O autoteste não pode ter efeito colateral ------------------- */
+  checa('Autoteste · não altera o estado da sessão', JSON.stringify(estado), estadoAntes);
+  checa('Autoteste · não deixa loja de mentira ativa', lojaDeTeste, null);
+  checa('Autoteste · preserva armazenamentoOk', armazenamentoOk, armazenamentoOkAntes);
+  checa('Autoteste · preserva o motivo do armazenamento', armazenamentoMotivo, armazenamentoMotivoAntes);
+  var avisoStorage = document.getElementById('aviso-armazenamento');
+  checa('Autoteste · não revela o aviso de armazenamento',
+        avisoStorage ? avisoStorage.hidden : true, armazenamentoOk);
+  if (lojaRealLegivel) {
+    var brutoDepois = null;
+    try { brutoDepois = window.localStorage.getItem(CHAVE_ARMAZENAMENTO); } catch (e) { brutoDepois = '(ilegível)'; }
+    checa('Autoteste · não escreve no localStorage real', brutoDepois, brutoAntes);
+  }
+
+  return { total: total, falhas: falhas, ok: falhas.length === 0 };
+}
+
+/* =====================================================================
+   5. ESTADO DA SESSÃO
+   ===================================================================== */
+var armazenamentoOk = true;
+var armazenamentoMotivo = '';   /* '' | 'cheio' | 'bloqueado' */
+var lojaDeTeste = null;   /* preenchido só pelo autoteste; em produção é sempre null */
+
+/* Quota estourada e storage bloqueado pedem remédios opostos: um é "exporte e
+   limpe a sessão", o outro é "saia da janela anônima". Diagnosticar errado manda
+   o usuário para o remédio errado — e cada item carrega cinco cadeias longas de
+   rastreabilidade, então quota é cenário plausível, não teórico. */
+function diagnosticarArmazenamento(e) {
+  var nome = (e && (e.name || '')) + ' ' + (e && (e.message || ''));
+  if (/quota|exceeded|cheio|full/i.test(nome)) return 'cheio';
+  if (e && (e.code === 22 || e.code === 1014)) return 'cheio';
+  return 'bloqueado';
+}
+
+function loja() { return lojaDeTeste || window.localStorage; }
+
+function novoItemCru() {
+  return {
+    id: '', polaridade: 'ameaca', tecnica: '',
+    causa: '', evento: '', efeito: '',
+    probabilidade: null, impPrazo: null, impCusto: null, impEscopo: null,
+    qualidade: '',
+    estrategia: '', acao: '', dono: '', gatilho: '', residual: '',
+    justificativa: '', destinatario: '', replanejamento: '',
+    riscoSecundario: '', riscoSecundarioFaixa: '', riscoSecundarioAvaliado: false,
+    dadoSensivel: false,
+    bImpacto: null, bViabilidade: null, bDados: null, bSeguranca: null, bValor: null,
+    confirmacoes: {}, decisao: '', validadoEm: '', encerrado: false
+  };
+}
+
+function sessaoNova() {
+  return {
+    versaoApp: APP_VERSAO,
+    criadoEm: new Date().toISOString(),
+    etapa: 1,
+    enquadramento: { contexto: '', dor: '', dados: '', riscos: '', valor: '' },
+    conduzidaPor: '',
+    abaIdentificar: 'ameaca',
+    soEsforcoBaixo: true,
+    tecnicaAtiva: { ameaca: '', oportunidade: '' },
+    novo: { tecnica: '', causa: '', evento: '', efeito: '' },
+    abaResponder: 'respostas',
+    itens: [], seq: 0
+  };
+}
+
+var estado = sessaoNova();
+
+/* Sessão virgem não é gravada: abrir a página não pode, sozinho, criar registro
+   no navegador de quem só veio olhar. */
+function sessaoVirgem() {
+  if (estado.itens.length) return false;
+  if (txt(estado.conduzidaPor)) return false;
+  return !COLUNAS_ENQUADRAMENTO.some(function (c) { return !!txt(estado.enquadramento[c.chave]); });
+}
+
+function salvar() {
+  var okAntes = armazenamentoOk, motivoAntes = armazenamentoMotivo;
+  try {
+    if (sessaoVirgem()) loja().removeItem(CHAVE_ARMAZENAMENTO);
+    else loja().setItem(CHAVE_ARMAZENAMENTO, serializarSessao(estado));
+    /* toda gravação é uma nova tentativa: se o storage voltar (o usuário limpou
+       espaço, saiu da janela anônima), o app volta a persistir sozinho */
+    armazenamentoOk = true; armazenamentoMotivo = '';
+  } catch (e) {
+    armazenamentoOk = false;
+    armazenamentoMotivo = diagnosticarArmazenamento(e);
+  }
+  if (armazenamentoOk !== okAntes || armazenamentoMotivo !== motivoAntes) marcarArmazenamento();
+}
+
+function serializarSessao(s) { return JSON.stringify(s); }
+
+/* Normaliza uma sessão vinda do armazenamento: campos ausentes voltam ao
+   padrão, itens antigos ganham os campos novos. Devolve null se o texto não
+   descreve uma sessão. */
+/* Um valor que não pertence ao domínio entra como o padrão, em vez de vazar para
+   a interface e o export. Sessão salva é entrada não confiável: pode vir de uma
+   versão antiga do app, de edição manual ou de storage corrompido. */
+function noDominio(valor, validos, padrao) {
+  return validos.indexOf(valor) !== -1 ? valor : padrao;
+}
+function notaOuNulo(v) { return ehNota(v) ? v : null; }
+function textoOuVazio(v) { return typeof v === 'string' ? v : ''; }
+
+function sanearItem(bruto) {
+  var it = novoItemCru(), c;
+  for (c in bruto) { if (Object.prototype.hasOwnProperty.call(bruto, c)) it[c] = bruto[c]; }
+
+  it.id = textoOuVazio(it.id);
+  it.polaridade = noDominio(it.polaridade, ['ameaca', 'oportunidade'], 'ameaca');
+  ['causa', 'evento', 'efeito', 'acao', 'dono', 'gatilho', 'residual', 'justificativa',
+   'destinatario', 'replanejamento', 'riscoSecundario', 'tecnica', 'validadoEm',
+   'promovidoPara', 'origemRiscoSecundario'].forEach(function (k) { it[k] = textoOuVazio(it[k]); });
+  ['probabilidade', 'impPrazo', 'impCusto', 'impEscopo',
+   'bImpacto', 'bViabilidade', 'bDados', 'bSeguranca', 'bValor'].forEach(function (k) { it[k] = notaOuNulo(it[k]); });
+  it.qualidade = noDominio(it.qualidade, ['', 'alta', 'media', 'baixa'], '');
+  it.decisao = noDominio(it.decisao, ['', 'aceite', 'ajuste'], '');
+  it.riscoSecundarioFaixa = noDominio(it.riscoSecundarioFaixa, ['', 'baixo', 'medio', 'alto'], '');
+  it.dadoSensivel = it.dadoSensivel === true;
+  it.riscoSecundarioAvaliado = it.riscoSecundarioAvaliado === true;
+  it.encerrado = it.encerrado === true;
+
+  var permitidas = ESTRATEGIAS[it.polaridade === 'oportunidade' ? 'oportunidade' : 'ameaca']
+    .map(function (e) { return e.nome; });
+  it.estrategia = noDominio(it.estrategia, [''].concat(permitidas), '');
+
+  if (!it.confirmacoes || typeof it.confirmacoes !== 'object' || Array.isArray(it.confirmacoes)) it.confirmacoes = {};
+
+  normalizarItem(it, true);
+  return it;
+}
+
+function desserializarSessao(bruto) {
+  var s;
+  try { s = JSON.parse(bruto); } catch (e) { return null; }
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+  var base = sessaoNova(), k;
+  for (k in s) { if (Object.prototype.hasOwnProperty.call(s, k)) base[k] = s[k]; }
+
+  if (!base.enquadramento || typeof base.enquadramento !== 'object' || Array.isArray(base.enquadramento)) {
+    base.enquadramento = sessaoNova().enquadramento;
+  }
+  COLUNAS_ENQUADRAMENTO.forEach(function (c) { base.enquadramento[c.chave] = textoOuVazio(base.enquadramento[c.chave]); });
+  if (!base.tecnicaAtiva || typeof base.tecnicaAtiva !== 'object') base.tecnicaAtiva = { ameaca: '', oportunidade: '' };
+  if (!base.novo || typeof base.novo !== 'object') base.novo = { tecnica: '', causa: '', evento: '', efeito: '' };
+  base.conduzidaPor = textoOuVazio(base.conduzidaPor);
+  base.etapa = (typeof base.etapa === 'number' && isFinite(base.etapa) &&
+                base.etapa >= 1 && base.etapa <= 5) ? Math.round(base.etapa) : 1;
+  base.abaIdentificar = noDominio(base.abaIdentificar, ['ameaca', 'oportunidade'], 'ameaca');
+  base.abaResponder = noDominio(base.abaResponder, ['respostas', 'reguab'], 'respostas');
+  base.soEsforcoBaixo = base.soEsforcoBaixo !== false;
+
+  if (!Array.isArray(base.itens)) base.itens = [];
+  base.itens = base.itens.map(sanearItem);
+
+  /* Reconcilia o contador de ids com o que existe. Sem isso, uma sessão restaurada
+     volta com seq = 0, o próximo item nasce R001 colidindo com um id já usado,
+     itemPorId passa a devolver o item errado e o export sai com ids duplicados. */
+  var maior = 0;
+  base.itens.forEach(function (it) {
+    var m = /^R(\d+)$/.exec(String(it.id || ''));
+    if (m) { var n = parseInt(m[1], 10); if (n > maior) maior = n; }
+  });
+  if (typeof base.seq !== 'number' || !isFinite(base.seq) || base.seq < maior) base.seq = maior;
+
+  return base;
+}
+
+function carregar() {
+  try {
+    loja().setItem(CHAVE_ARMAZENAMENTO + '/teste', '1');
+    loja().removeItem(CHAVE_ARMAZENAMENTO + '/teste');
+  } catch (e) {
+    armazenamentoOk = false;   /* janela anônima ou storage bloqueado: segue em memória */
+  }
+  var bruto = null;
+  try {
+    bruto = loja().getItem(CHAVE_ARMAZENAMENTO);
+  } catch (e) {
+    armazenamentoOk = false;
+    return;
+  }
+  if (!bruto) return;
+  var restaurada = desserializarSessao(bruto);
+  if (restaurada) estado = restaurada;   /* sessão corrompida: começa do zero, sem quebrar */
+}
+
+function limparSessao() {
+  /* limpar é a saída natural para quota estourada, então reavalia o armazenamento */
+  try {
+    loja().removeItem(CHAVE_ARMAZENAMENTO);
+    armazenamentoOk = true; armazenamentoMotivo = '';
+  } catch (e) {
+    armazenamentoOk = false; armazenamentoMotivo = diagnosticarArmazenamento(e);
+  }
+  marcarArmazenamento();
+  estado = sessaoNova();
+  render();
+}
+
+/* --- derivados do item --- */
+function severidadeDoItem(it) {
+  return severidade(it.probabilidade, impactoAgregado([it.impPrazo, it.impCusto, it.impEscopo]));
+}
+function impactoDoItem(it) { return impactoAgregado([it.impPrazo, it.impCusto, it.impEscopo]); }
+function txt(v) { return String(v == null ? '' : v).trim(); }
+function ehRascunho(it) { return !txt(it.causa) || !txt(it.efeito) || !txt(it.evento); }
+function faltasDoEnunciado(it) {
+  var f = [];
+  if (!txt(it.causa)) f.push('causa');
+  if (!txt(it.evento)) f.push('evento incerto');
+  if (!txt(it.efeito)) f.push('efeito no objetivo');
+  return f;
+}
+function enunciadoDe(it) {
+  return 'Devido a ' + (txt(it.causa) || '⟨causa⟩') +
+         ', pode ocorrer ' + (txt(it.evento) || '⟨evento incerto⟩') +
+         ', o que levaria a ' + (txt(it.efeito) || '⟨efeito no objetivo⟩') + '.';
+}
+function prioridadeBDoItem(it) {
+  return prioridadeB(it.bImpacto, it.bViabilidade, it.bDados, it.bSeguranca, it.bValor);
+}
+function itemPorId(id) {
+  for (var i = 0; i < estado.itens.length; i++) { if (estado.itens[i].id === id) return estado.itens[i]; }
+  return null;
+}
+function itensPriorizaveis() { return estado.itens.filter(function (it) { return !ehRascunho(it); }); }
+/* Governa o `disabled` dos botões de exportação: registro vazio, nada a exportar. */
+function exportacaoDisponivel() { return estado.itens.length > 0; }
+function enquadramentoCompleto() {
+  return COLUNAS_ENQUADRAMENTO.every(function (c) { return !!txt(estado.enquadramento[c.chave]); });
+}
+
+/* --- bloqueios de encerramento (o corte obrigatório é transversal) --- */
+function bloqueiosDe(it) {
+  var b = [];
+  var dono = analisarDono(it.dono);
+  if (dono.estado === 'vazio') b.push(dono.mensagem);
+  if (ehRascunho(it)) {
+    b.push('Enunciado incompleto: falta ' + faltasDoEnunciado(it).join(' e ') +
+           '. O item fica como rascunho e não é priorizável.');
+  }
+  if (!faixaA(severidadeDoItem(it))) {
+    b.push('Sem priorização (Régua A): informe Probabilidade e ao menos uma dimensão de Impacto na Etapa 3.');
+  }
+  if (!it.qualidade) b.push('Sem qualidade do dado: informe 🟢 alta, 🟡 média ou 🔴 baixa na Etapa 3.');
+  regrasConsistencia(it).forEach(function (r) { if (r.bloqueia && !r.ok) b.push(r.mensagem); });
+  var pendentes = gatilhosHITL(it).filter(function (g) { return !it.confirmacoes[g.id]; });
+  if (pendentes.length) {
+    b.push('Validação humana pendente: ' + pendentes.length +
+           ' gatilho(s) de confirmação obrigatória sem confirmação explícita (Etapa 4).');
+  }
+  if (!it.decisao) b.push('Registre a decisão da validação humana: aceite ou ajuste (Etapa 5).');
+  return b;
+}
+function podeEncerrar(it) { return bloqueiosDe(it).length === 0; }
+
+/* --- Normalização do item -------------------------------------------------
+   Quatro invariantes que a edição pode quebrar e que ninguém deveria precisar
+   lembrar de manter à mão. Rodam na edição de qualquer campo e na restauração
+   da sessão, para que um registro salvo antigo entre já saneado. */
+
+/* Confirmação de HITL vale enquanto o gatilho que a exigiu está vivo. Se o
+   gatilho some e volta — trocar a estratégia de Evitar para Mitigar e de volta —
+   a confirmação velha não pode valer pela nova. */
+function descartarConfirmacoesMortas(it) {
+  var vivos = {}, mudou = false, k;
+  gatilhosHITL(it).forEach(function (g) { vivos[g.id] = true; });
+  for (k in it.confirmacoes) {
+    if (Object.prototype.hasOwnProperty.call(it.confirmacoes, k) && !vivos[k]) {
+      delete it.confirmacoes[k]; mudou = true;
+    }
+  }
+  return mudou;
+}
+
+/* Campo que só existe para uma estratégia não sobrevive à troca de estratégia:
+   senão a linha exportada carrega justificativa de Aceitar num item Mitigar. */
+function limparCamposDeEstrategiaObsoletos(it) {
+  var mudou = false;
+  if (it.estrategia !== 'Aceitar' && txt(it.justificativa)) { it.justificativa = ''; mudou = true; }
+  if (it.estrategia !== 'Escalar' && txt(it.destinatario)) { it.destinatario = ''; mudou = true; }
+  if (it.estrategia !== 'Evitar' && it.estrategia !== 'Explorar' && txt(it.replanejamento)) {
+    it.replanejamento = ''; mudou = true;
+  }
+  return mudou;
+}
+
+/* "Avaliei e não cria risco secundário" e um risco secundário descrito são
+   estados mutuamente exclusivos. Aceitar os dois faria a Regra 4 reportar ok
+   enquanto o gatilho g5 dispara no mesmo item. */
+function normalizarRiscoSecundario(it, preferirTexto) {
+  var temTexto = !!txt(it.riscoSecundario) || !!it.riscoSecundarioFaixa;
+  if (!it.riscoSecundarioAvaliado || !temTexto) return false;
+  if (preferirTexto) { it.riscoSecundarioAvaliado = false; }
+  else { it.riscoSecundario = ''; it.riscoSecundarioFaixa = ''; }
+  return true;
+}
+
+/* Carimbo de encerramento não sobrevive ao fato que o justificava: editar um
+   item encerrado até ele voltar a falhar o corte obrigatório reabre o item. */
+function revalidarEncerramento(it) {
+  if (it.encerrado && !podeEncerrar(it)) {
+    it.encerrado = false;
+    it.validadoEm = '';
+    return true;
+  }
+  return false;
+}
+
+function normalizarItem(it, preferirTextoNoRiscoSecundario) {
+  normalizarRiscoSecundario(it, preferirTextoNoRiscoSecundario === true);
+  limparCamposDeEstrategiaObsoletos(it);
+  descartarConfirmacoesMortas(it);
+  revalidarEncerramento(it);
+  return it;
+}
+function pendenteDeDono(it) { return analisarDono(it.dono).estado === 'vazio'; }
+function statusDe(it) {
+  /* O corte obrigatório vem primeiro: um item sem dono é "não-pronto" mesmo que
+     carregue um carimbo de encerramento antigo. Sem esta ordem, a linha exportada
+     diria "Encerrado" dentro da seção "Pendente de dono" e se contradiria. */
+  if (pendenteDeDono(it)) return 'Pendente de dono';
+  if (it.encerrado) return 'Encerrado';
+  if (ehRascunho(it)) return 'Rascunho';
+  if (precisaInvestigar(severidadeDoItem(it), it.qualidade)) return 'Investigue';
+  return 'Aberto';
+}
+
+/* =====================================================================
+   6. UTILITÁRIOS DE RENDERIZAÇÃO
+   ===================================================================== */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function $(sel, raiz) { return (raiz || document).querySelector(sel); }
+function $$(sel, raiz) { return Array.prototype.slice.call((raiz || document).querySelectorAll(sel)); }
+
+function opcoes(lista, atual, rotuloVazio) {
+  var html = '<option value=""' + (atual === null || atual === '' || atual === undefined ? ' selected' : '') +
+             '>' + esc(rotuloVazio || '— selecione —') + '</option>';
+  lista.forEach(function (o) {
+    var sel = (String(o.valor) === String(atual)) ? ' selected' : '';
+    html += '<option value="' + esc(o.valor) + '"' + sel + '>' + esc(o.rotulo) + '</option>';
+  });
+  return html;
+}
+function opcoesProbabilidade(atual) {
+  return opcoes(PROBABILIDADE.map(function (p) {
+    return { valor: p.n, rotulo: p.n + ' · ' + p.rotulo + ' — ' + p.criterio };
+  }), atual);
+}
+function opcoesImpacto(dim, atual) {
+  return opcoes(dim.criterios.map(function (c, i) {
+    return { valor: i + 1, rotulo: (i + 1) + ' · ' + IMPACTO_ROTULOS[i] + ' — ' + c };
+  }), atual);
+}
+function opcoesQualidade(atual) {
+  return opcoes(QUALIDADE_DADO.map(function (q) {
+    return { valor: q.chave, rotulo: q.emoji + ' ' + q.rotulo + ' — ' + q.base };
+  }), atual);
+}
+function opcoesNotaB(atual) {
+  return opcoes(NOTAS_B.map(function (n) {
+    return { valor: n.n, rotulo: n.rotulo === '—' ? String(n.n) : n.n + ' · ' + n.rotulo };
+  }), atual);
+}
+function pilulaFaixaA(sev) {
+  var f = faixaA(sev);
+  if (!f) return '<span class="pilula pilula-neutra">Sem priorização</span>';
+  return '<span class="pilula ' + f.classe + '">' + f.emoji + ' ' + f.rotulo + ' · severidade ' + sev + '</span>';
+}
+function pilulaFaixaB(p) {
+  var f = faixaB(p);
+  if (!f) return '<span class="pilula pilula-neutra">Sem pontuação</span>';
+  return '<span class="pilula ' + f.classe + '">' + f.rotulo + ' · ' + p + '</span>';
+}
+function pilulaPolaridade(pol) {
+  return pol === 'oportunidade'
+    ? '<span class="pilula pilula-acc">Oportunidade</span>'
+    : '<span class="pilula pilula-neutra">Ameaça</span>';
+}
+function dataBR(iso) {
+  if (!iso) return '';
+  try {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() +
+           ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  } catch (e) { return iso; }
+}
+
+/* =====================================================================
+   7. ETAPAS
+   ===================================================================== */
+var ETAPAS = [
+  { n: 1, curto: 'Enquadrar',  titulo: 'Enquadrar — mapa inicial de oportunidades (registro de partes interessadas + declaração de escopo)' },
+  { n: 2, curto: 'Identificar', titulo: 'Identificar — ameaças e oportunidades (Identificar os Riscos)' },
+  { n: 3, curto: 'Priorizar',  titulo: 'Priorizar — Régua A · Probabilidade × Impacto (Realizar a Análise Qualitativa dos Riscos)' },
+  { n: 4, curto: 'Responder',  titulo: 'Responder — estratégias (Planejar as Respostas aos Riscos)' },
+  { n: 5, curto: 'Registrar',  titulo: 'Registrar — validação humana e exportação (governança / HITL)' }
+];
+
+function renderPassos() {
+  var completo = enquadramentoCompleto();
+  $('#passos').innerHTML = ETAPAS.map(function (e) {
+    var atual = estado.etapa === e.n;
+    var travado = e.n > 1 && !completo;
+    return '<button type="button" class="passo" data-etapa="' + e.n + '"' +
+      (atual ? ' aria-current="step"' : '') + (travado ? ' disabled' : '') +
+      ' title="' + esc(e.titulo) + '"><span class="n">' + e.n + '</span>' + esc(e.curto) + '</button>';
+  }).join('');
+}
+
+function cabeca(n) {
+  var e = ETAPAS[n - 1];
+  return '<div class="cabeca-etapa"><p class="kicker">Etapa ' + n + ' de 5</p><h2>' +
+    esc(e.titulo) + '</h2>';
+}
+
+/* --- Etapa 1: Enquadrar --- */
+function renderEtapa1() {
+  var h = cabeca(1) +
+    '<p>As cinco colunas da Aula 1. Sem elas, toda técnica de identificação produz risco genérico — ' +
+    'por isso a Etapa 2 fica indisponível enquanto alguma estiver vazia.</p></div>';
+
+  h += '<div class="bloco">';
+  COLUNAS_ENQUADRAMENTO.forEach(function (c) {
+    h += '<div class="campo">' +
+      '<label for="enq-' + c.chave + '">' + esc(c.titulo) + '</label>' +
+      '<p class="dica">' + esc(c.pergunta) + ' <em>· ' + esc(c.uso) + '</em></p>' +
+      '<textarea id="enq-' + c.chave + '" data-enq="' + c.chave + '" rows="2" ' +
+      'placeholder="' + esc(c.pergunta) + '">' + esc(estado.enquadramento[c.chave]) + '</textarea>' +
+      '</div>';
+  });
+  h += '<div class="derivado" id="enq-status" aria-live="polite"></div>';
+  h += '<div class="acoes"><button type="button" class="btn" data-ir="2" id="btn-ir-2">Ir para Identificar →</button></div>';
+  h += '</div>';
+
+  h += blocoLimitesResumo();
+  return h;
+}
+
+function renderEnqStatus() {
+  var alvo = $('#enq-status');
+  if (!alvo) return;
+  var faltando = COLUNAS_ENQUADRAMENTO.filter(function (c) { return !txt(estado.enquadramento[c.chave]); });
+  if (faltando.length) {
+    alvo.innerHTML = '<div class="nota nota-aviso"><p><b>Sessão sem contexto.</b> A etapa Identificar fica indisponível enquanto ' +
+      faltando.length + ' coluna(s) do enquadramento estiverem vazias: ' +
+      esc(faltando.map(function (c) { return c.titulo; }).join(', ')) + '.</p></div>';
+  } else {
+    alvo.innerHTML = '<div class="nota nota-acc"><p><b>Enquadramento completo.</b> Ele vira o cabeçalho do registro e o elo <em>Entrada</em> da rastreabilidade (auditabilidade / trilha de decisão).</p></div>';
+  }
+  var btn = $('#btn-ir-2');
+  if (btn) btn.disabled = faltando.length > 0;
+}
+
+/* --- Etapa 2: Identificar --- */
+function renderEtapa2() {
+  var pol = estado.abaIdentificar;
+  var h = cabeca(2) +
+    '<p>Faça a pergunta de disparo <b>literalmente</b> — ela é concreta de propósito. Insista: a primeira resposta é sempre a óbvia. ' +
+    'Combine de 2 a 4 técnicas de ângulos diferentes; uma só produz um ponto cego previsível.</p></div>';
+
+  /* As duas abas desenham no MESMO painel, então as duas apontam para ele em
+     aria-controls. tabindex móvel: só a aba ativa entra na ordem de tabulação. */
+  h += '<div class="abas" role="tablist" aria-label="Polaridade do risco">' +
+    '<button type="button" class="aba" role="tab" id="aba-ameaca" aria-controls="painel-identificar"' +
+    ' data-aba-id="ameaca" aria-selected="' + (pol === 'ameaca') + '"' +
+    ' tabindex="' + (pol === 'ameaca' ? '0' : '-1') + '">Ameaças</button>' +
+    '<button type="button" class="aba" role="tab" id="aba-oportunidade" aria-controls="painel-identificar"' +
+    ' data-aba-id="oportunidade" aria-selected="' + (pol === 'oportunidade') + '"' +
+    ' tabindex="' + (pol === 'oportunidade' ? '0' : '-1') + '">Oportunidades</button>' +
+    '</div>' +
+    '<div id="painel-identificar" role="tabpanel" aria-labelledby="aba-' + esc(pol) + '">';
+
+  if (pol === 'oportunidade') {
+    h += '<div class="nota nota-acc"><p><b>Riscos positivos.</b> As mesmas técnicas com a polaridade da pergunta invertida. ' +
+      'T01 Pré-mortem vira <em>pré-mortem invertido</em>: “Estamos 6 meses à frente e o projeto foi um sucesso muito além do esperado. ' +
+      'Escreva a manchete. O que deu certo?”</p></div>';
+  }
+
+  h += '<div class="bloco">';
+  h += '<h3>Catálogo de técnicas (Identificar os Riscos)</h3>';
+  h += '<label class="check"><input type="checkbox" id="filtro-esforco"' + (estado.soEsforcoBaixo ? ' checked' : '') + '>' +
+    '<span>Só técnicas de <b>esforço baixo</b> — a pré-seleção da sessão de 15 minutos</span></label>';
+
+  var lista = tecnicasDe(pol).filter(function (t) {
+    return !estado.soEsforcoBaixo || t.esforco === 'baixo';
+  });
+  if (!lista.length) {
+    h += '<p class="vazio">Nenhuma técnica no filtro atual. Desmarque o filtro de esforço baixo.</p>';
+  } else {
+    h += '<div class="grade-tecnicas">';
+    lista.forEach(function (t) {
+      var ativa = estado.tecnicaAtiva[pol] === t.id;
+      h += '<article class="tecnica' + (ativa ? ' ativa' : '') + '">' +
+        '<h3>' + esc(t.id) + ' · ' + esc(t.tecnica) + '</h3>' +
+        '<p class="meta">' + esc(t.tecnica) + ' (' + esc(t.origem_pmbok) + ') · esforço ' + esc(t.esforco) + '</p>' +
+        '<p class="disparo">' + esc(t.pergunta_disparo) + '</p>' +
+        '<dl>' +
+        '<dt>Padrão de saída</dt><dd>' + esc(t.padrao_saida) + '</dd>' +
+        '<dt>Serve para</dt><dd>' + esc(t.serve_para.split('|').join(' · ')) + '</dd>' +
+        '</dl>' +
+        '<div class="acoes"><button type="button" class="btn btn-mini' + (ativa ? '' : ' btn-fantasma') +
+        '" data-usar-tecnica="' + esc(t.id) + '">' + (ativa ? 'Técnica em uso' : 'Usar esta técnica') + '</button></div>' +
+        '</article>';
+    });
+    h += '</div>';
+  }
+
+  h += '<details><summary>Combinações recomendadas por situação</summary><div class="rolagem"><table>' +
+    '<thead><tr><th>Situação</th><th>Combinação</th></tr></thead><tbody>' +
+    COMBINACOES.map(function (c) { return '<tr><td>' + esc(c[0]) + '</td><td>' + esc(c[1]) + '</td></tr>'; }).join('') +
+    '</tbody></table></div></details>';
+  h += '</div>';
+
+  /* formulário de enunciado */
+  var tec = tecnicaPorId(estado.tecnicaAtiva[pol]);
+  h += '<div class="bloco">';
+  h += '<h3>Enunciar o risco</h3>';
+  h += '<div class="nota"><p><b>Devido a</b> ⟨causa — um fato conhecido⟩, <b>pode ocorrer</b> ⟨evento incerto⟩, ' +
+    '<b>o que levaria a</b> ⟨efeito no objetivo⟩.</p>' +
+    '<p><small>A causa é onde a resposta preventiva age; o efeito é o que alimenta o Impacto na priorização. ' +
+    'Por isso os três campos são separados.</small></p></div>';
+  if (tec) {
+    h += '<div class="nota nota-acc"><p><b>Pergunta de disparo em uso — ' + esc(tec.id) + ' ' + esc(tec.tecnica) + ':</b><br>' +
+      esc(tec.pergunta_disparo) + '</p></div>';
+  }
+  var disponiveis = tecnicasDe(pol);
+  if (!disponiveis.some(function (t) { return t.id === estado.novo.tecnica; })) {
+    estado.novo.tecnica = estado.tecnicaAtiva[pol] || '';
+  }
+  h += '<div class="campo"><label for="novo-tecnica">Técnica aplicada</label>' +
+    '<select id="novo-tecnica" data-novo="tecnica">' +
+    opcoes(disponiveis.map(function (t) { return { valor: t.id, rotulo: t.id + ' · ' + t.tecnica + ' (' + t.origem_pmbok + ')' }; }),
+           estado.novo.tecnica, '— sem técnica registrada —') + '</select></div>';
+  h += '<div class="campo"><label for="novo-causa">Causa — um fato conhecido</label>' +
+    '<textarea id="novo-causa" data-novo="causa" rows="2" placeholder="dependência de um único integrador para a carga de dados legados">' + esc(estado.novo.causa) + '</textarea></div>';
+  h += '<div class="campo"><label for="novo-evento">Evento incerto</label>' +
+    '<textarea id="novo-evento" data-novo="evento" rows="2" placeholder="estouro da janela de virada">' + esc(estado.novo.evento) + '</textarea></div>';
+  h += '<div class="campo"><label for="novo-efeito">Efeito no objetivo</label>' +
+    '<textarea id="novo-efeito" data-novo="efeito" rows="2" placeholder="adiamento do go-live e custo adicional de operação paralela">' + esc(estado.novo.efeito) + '</textarea></div>';
+  h += '<div class="derivado" id="novo-status" aria-live="polite"></div>';
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-adicionar">Adicionar ao registro</button>' +
+    '<small class="acoes-fim">Campos incompletos entram como rascunho — registrar é permitido, priorizar não.</small></div>';
+
+  h += '<details><summary>Como não escorregar</summary><ul>' +
+    NAO_ESCORREGAR.map(function (r) { return '<li><b>' + esc(r[0]) + '.</b> ' + esc(r[1]) + '</li>'; }).join('') +
+    '</ul></details>';
+  h += '</div>';
+
+  /* itens já registrados */
+  h += '<div class="bloco"><h3>Itens registrados <span class="pilula pilula-neutra">' + estado.itens.length + '</span></h3>';
+  if (!estado.itens.length) {
+    h += '<p class="vazio">Nenhum item ainda. O registro começa vazio de propósito: o método produz a lista, não pressupõe ela.</p>';
+  } else {
+    h += estado.itens.map(function (it) { return cartaoItemSimples(it); }).join('');
+  }
+  h += '<div class="acoes"><button type="button" class="btn btn-fantasma" data-ir="1">← Enquadrar</button>' +
+    '<button type="button" class="btn" data-ir="3">Ir para Priorizar →</button></div>';
+  h += '</div>';
+
+  h += '</div>';   /* fecha #painel-identificar (role=tabpanel) */
+  h += blocoLimitesResumo();
+  return h;
+}
+
+function cartaoItemSimples(it) {
+  var tec = tecnicaPorId(it.tecnica);
+  var campo = function (rotulo, chave, valor) {
+    var id = 'i2-' + chave + '-' + it.id;
+    return '<div class="campo"><label for="' + esc(id) + '">' + esc(rotulo) + '</label>' +
+      '<textarea id="' + esc(id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="' + esc(chave) + '">' +
+      esc(valor) + '</textarea></div>';
+  };
+  return '<div class="item" data-cartao-i2="' + esc(it.id) + '">' +
+    '<div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+    pilulaPolaridade(it.polaridade) +
+    '<span data-pilula-i2="' + esc(it.id) + '"></span>' +
+    (tec ? '<span class="pilula pilula-neutra">' + esc(tec.id) + ' ' + esc(tec.tecnica) + '</span>' : '') +
+    '<span class="acoes-fim"><button type="button" class="btn btn-fantasma btn-mini" data-remover="' + esc(it.id) + '">Remover</button></span>' +
+    '</div>' +
+    '<p class="enunciado"></p>' +
+    '<div data-nota-i2="' + esc(it.id) + '" aria-live="polite"></div>' +
+    '<div class="linha-campos">' +
+    campo('Causa', 'causa', it.causa) +
+    campo('Evento incerto', 'evento', it.evento) +
+    campo('Efeito no objetivo', 'efeito', it.efeito) +
+    '</div></div>';
+}
+
+/* O cartão da Etapa 2 é o único lugar onde o app ensina a própria regra de
+   rascunho. Se a pílula, a borda e o aviso não acompanharem a digitação, ele
+   ensina errado. Atualiza tudo sem remontar os campos, para não roubar o foco. */
+function renderCartaoI2(it) {
+  var cartao = document.querySelector('[data-cartao-i2="' + it.id + '"]');
+  if (!cartao) return;
+  var rascunho = ehRascunho(it);
+  cartao.className = 'item' + (rascunho ? ' rascunho' : '');
+  var linha = cartao.querySelector('.enunciado');
+  if (linha) linha.textContent = enunciadoDe(it);
+  var pil = cartao.querySelector('[data-pilula-i2]');
+  if (pil) pil.innerHTML = rascunho ? '<span class="pilula pilula-aviso">Rascunho</span>' : '';
+  var nota = cartao.querySelector('[data-nota-i2]');
+  if (nota) {
+    nota.innerHTML = rascunho
+      ? '<div class="nota nota-aviso"><p>Falta ' + esc(faltasDoEnunciado(it).join(' e ')) +
+        '. Enquanto faltar, o item não é priorizável.</p></div>'
+      : '';
+  }
+}
+
+/* --- Etapa 3: Priorizar (Régua A). A Régua B NÃO aparece nesta tela. --- */
+function renderEtapa3() {
+  var h = cabeca(3) +
+    '<p>Régua A prioriza <b>riscos</b> e responde “qual risco olhar primeiro?”. Preencha o Impacto ' +
+    '<b>por dimensão</b> e o método usa a maior nota: um risco de prazo 2 mas custo 5 é um risco 5.</p></div>';
+
+  h += '<div class="nota nota-acc"><p><b>Só a Régua A nesta tela.</b> A Régua B (fórmula da Aula 2) prioriza iniciativas e respostas, ' +
+    'não riscos — ela vive na Etapa 4, em bloco próprio. Confundir as duas é o erro conceitual mais comum em matriz de risco, ' +
+    'e elas nunca são somadas.</p></div>';
+
+  var priorizaveis = itensPriorizaveis();
+  var rascunhos = estado.itens.filter(ehRascunho);
+
+  h += '<div class="bloco">';
+  h += '<h3>Riscos priorizáveis <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  if (!priorizaveis.length) {
+    h += '<p class="vazio">Nenhum item com enunciado completo. Volte à Etapa 2 e complete causa, evento e efeito.</p>';
+  } else {
+    h += priorizaveis.map(cartaoPriorizar).join('');
+  }
+  h += '</div>';
+
+  if (rascunhos.length) {
+    h += '<div class="bloco bloco-quieto"><h3>Rascunhos — não priorizáveis <span class="pilula pilula-aviso">' + rascunhos.length + '</span></h3>' +
+      '<p><small>Enunciado incompleto: o item está registrado, mas não recebe nota até que os campos abaixo estejam preenchidos.</small></p>' +
+      rascunhos.map(function (it) {
+        return '<div class="item rascunho"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+          pilulaPolaridade(it.polaridade) + '<span class="pilula pilula-aviso">Falta ' +
+          esc(faltasDoEnunciado(it).join(' e ')) + '</span></div><p class="enunciado">' + esc(enunciadoDe(it)) + '</p></div>';
+      }).join('') + '</div>';
+  }
+
+  h += '<details><summary>Tabelas da Régua A — Probabilidade, Impacto e faixas</summary>' + tabelasReguaA() + '</details>';
+  h += '<div class="acoes"><button type="button" class="btn btn-fantasma" data-ir="2">← Identificar</button>' +
+    '<button type="button" class="btn" data-ir="4">Ir para Responder →</button></div>';
+  h += blocoLimitesResumo();
+  return h;
+}
+
+function cartaoPriorizar(it) {
+  var h = '<div class="item"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+    pilulaPolaridade(it.polaridade) + '</div>' +
+    '<p class="enunciado">' + esc(enunciadoDe(it)) + '</p>';
+  h += '<div class="campo"><label for="p-' + esc(it.id) + '">Probabilidade (1–5)</label>' +
+    '<select id="p-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="probabilidade" data-num="1">' +
+    opcoesProbabilidade(it.probabilidade) + '</select></div>';
+  h += '<div class="linha-campos">';
+  DIMENSOES_IMPACTO.forEach(function (d) {
+    h += '<div class="campo"><label for="' + esc(d.chave) + '-' + esc(it.id) + '">Impacto · ' + esc(d.titulo) + '</label>' +
+      '<select id="' + esc(d.chave) + '-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="' + esc(d.chave) + '" data-num="1">' +
+      opcoesImpacto(d, it[d.chave]) + '</select></div>';
+  });
+  h += '</div>';
+  h += '<div class="campo"><label for="q-' + esc(it.id) + '">Qualidade do dado</label>' +
+    '<p class="dica">Um risco pontuado por chute tem a mesma cor na matriz que um risco pontuado por evidência.</p>' +
+    '<select id="q-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="qualidade">' +
+    opcoesQualidade(it.qualidade) + '</select></div>';
+  h += '<label class="check"><input type="checkbox" data-item="' + esc(it.id) + '" data-campo="dadoSensivel"' +
+    (it.dadoSensivel ? ' checked' : '') + '><span>Envolve dado pessoal, sensível ou sujeito a sigilo contratual ' +
+    '<small>(gatilho 3 de validação humana obrigatória)</small></span></label>';
+  h += '<div class="derivado" data-derivado-a="' + esc(it.id) + '" aria-live="polite"></div>';
+  h += '</div>';
+  return h;
+}
+
+function renderDerivadoA(it) {
+  var alvo = $('[data-derivado-a="' + it.id + '"]');
+  if (!alvo) return;
+  var imp = impactoDoItem(it), sev = severidadeDoItem(it), f = faixaA(sev);
+  var h = '<div class="sumario">' +
+    '<span>Probabilidade<b>' + (ehNota(it.probabilidade) ? it.probabilidade : '—') + '</b></span>' +
+    '<span>Impacto (maior nota)<b>' + (ehNota(imp) ? imp : '—') + '</b></span>' +
+    '<span>Severidade<b>' + (sev === null ? '—' : sev) + '</b></span>' +
+    '<span>Faixa<b>' + (f ? f.emoji + ' ' + f.rotulo : '—') + '</b></span>' +
+    '</div>';
+  if (f) {
+    h += '<div class="nota"><p><b>' + esc(f.emoji + ' ' + f.rotulo) + ' (' + f.min + '–' + f.max + ').</b> ' + esc(f.tratamento) + '</p></div>';
+  } else {
+    h += '<div class="nota nota-aviso"><p>Informe Probabilidade e ao menos uma dimensão de Impacto para calcular a severidade.</p></div>';
+  }
+  if (precisaInvestigar(sev, it.qualidade)) {
+    h += '<div class="nota nota-erro"><p><b>Investigue.</b> Severidade alta com qualidade de dado baixa (🔴 estimativa sem referência). ' +
+      'Este item <b>não vira ação imediata</b>: a próxima ação é reduzir a incerteza do dado. Seguir para resposta exige ' +
+      'confirmação humana explícita na Etapa 4.</p></div>';
+  }
+  alvo.innerHTML = h;
+}
+
+function tabelasReguaA() {
+  var h = '<div class="rolagem"><table><caption>Probabilidade</caption><thead><tr><th>Nota</th><th>Rótulo</th><th>Critério</th></tr></thead><tbody>' +
+    PROBABILIDADE.map(function (p) { return '<tr><td>' + p.n + '</td><td>' + esc(p.rotulo) + '</td><td>' + esc(p.criterio) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  h += '<div class="rolagem"><table><caption>Impacto</caption><thead><tr><th>Nota</th><th>Rótulo</th>' +
+    DIMENSOES_IMPACTO.map(function (d) { return '<th>' + esc(d.titulo) + '</th>'; }).join('') + '</tr></thead><tbody>';
+  for (var i = 0; i < 5; i++) {
+    h += '<tr><td>' + (i + 1) + '</td><td>' + esc(IMPACTO_ROTULOS[i]) + '</td>' +
+      DIMENSOES_IMPACTO.map(function (d) { return '<td>' + esc(d.criterios[i]) + '</td>'; }).join('') + '</tr>';
+  }
+  h += '</tbody></table></div>';
+  h += '<div class="rolagem"><table><caption>Severidade = Probabilidade × Impacto (1 a 25)</caption>' +
+    '<thead><tr><th>Faixa</th><th>Severidade</th><th>Tratamento</th></tr></thead><tbody>' +
+    FAIXAS_A.map(function (f) {
+      return '<tr><td>' + f.emoji + ' <b>' + esc(f.rotulo) + '</b></td><td>' + f.min + ' – ' + f.max + '</td><td>' + esc(f.tratamento) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  h += '<p><small>Para oportunidades, a mesma escala: severidade alta significa perseguir com a mesma energia de uma ameaça alta. ' +
+    'É onde a maioria das organizações deixa valor na mesa.</small></p>';
+  h += '<div class="rolagem"><table><caption>Qualidade dos dados do risco</caption><thead><tr><th>Nota</th><th>Base da avaliação</th></tr></thead><tbody>' +
+    QUALIDADE_DADO.map(function (q) { return '<tr><td>' + q.emoji + ' ' + esc(q.rotulo) + '</td><td>' + esc(q.base) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  return h;
+}
+
+/* --- Etapa 4: Responder. Duas abas mutuamente exclusivas: nunca A e B na mesma tela. --- */
+function renderEtapa4() {
+  var h = cabeca(4) +
+    '<p>Cinco estratégias para ameaças, cinco espelhadas para oportunidades. Uma resposta sem os cinco campos obrigatórios ' +
+    'não é uma resposta — é uma intenção.</p></div>';
+
+  var abaR = estado.abaResponder;
+  h += '<div class="abas" role="tablist" aria-label="Régua em uso">' +
+    '<button type="button" class="aba" role="tab" id="aba-respostas" aria-controls="painel-responder"' +
+    ' data-aba4="respostas" aria-selected="' + (abaR === 'respostas') + '"' +
+    ' tabindex="' + (abaR === 'respostas' ? '0' : '-1') + '">Planejar respostas (Régua A)</button>' +
+    '<button type="button" class="aba" role="tab" id="aba-reguab" aria-controls="painel-responder"' +
+    ' data-aba4="reguab" aria-selected="' + (abaR === 'reguab') + '"' +
+    ' tabindex="' + (abaR === 'reguab' ? '0' : '-1') + '">Desempatar respostas (Régua B)</button>' +
+    '</div>';
+
+  return h + '<div id="painel-responder" role="tabpanel" aria-labelledby="aba-' +
+    (abaR === 'reguab' ? 'reguab' : 'respostas') + '">' +
+    (abaR === 'reguab' ? painelReguaB() : painelRespostas()) + '</div>' + blocoLimitesResumo();
+}
+
+function painelRespostas() {
+  var priorizaveis = itensPriorizaveis();
+  var h = '<div class="nota"><p><b>Nesta aba, só a Régua A.</b> A faixa de severidade governa a obrigatoriedade da resposta. ' +
+    'A Régua B fica na outra aba, e as duas nunca aparecem juntas nem são somadas.</p></div>';
+  h += '<div class="bloco">';
+  h += '<h3>Respostas <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  if (!priorizaveis.length) {
+    h += '<p class="vazio">Nenhum item priorizável ainda. Volte à Etapa 2 para completar enunciados, ou à Etapa 3 para pontuar.</p>';
+  } else {
+    h += priorizaveis.map(cartaoResponder).join('');
+  }
+  h += '</div>';
+  h += '<details><summary>As dez estratégias e as cinco regras de consistência</summary>' + tabelasEstrategias() + '</details>';
+  h += '<div class="acoes"><button type="button" class="btn btn-fantasma" data-ir="3">← Priorizar</button>' +
+    '<button type="button" class="btn" data-ir="5">Ir para Registrar →</button></div>';
+  return h;
+}
+
+function cartaoResponder(it) {
+  var lista = ESTRATEGIAS[it.polaridade === 'oportunidade' ? 'oportunidade' : 'ameaca'];
+  var sev = severidadeDoItem(it);
+  var h = '<div class="item"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+    pilulaPolaridade(it.polaridade) + pilulaFaixaA(sev) +
+    (precisaInvestigar(sev, it.qualidade) ? '<span class="pilula pilula-alto">Investigue</span>' : '') +
+    '</div>' +
+    '<p class="enunciado">' + esc(enunciadoDe(it)) + '</p>';
+
+  if (precisaInvestigar(sev, it.qualidade)) {
+    h += '<div class="nota nota-erro"><p><b>Item marcado Investigue.</b> Severidade alta apoiada em estimativa sem referência. ' +
+      'A ação prioritária é reduzir a incerteza do dado, não implementar resposta. Só siga após confirmar o gatilho de validação humana abaixo.</p></div>';
+  }
+
+  h += '<div class="campo"><label for="e-' + esc(it.id) + '">Estratégia</label>' +
+    '<select id="e-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="estrategia">' +
+    opcoes(lista.map(function (s) { return { valor: s.nome, rotulo: s.nome + ' — ' + s.oque }; }), it.estrategia) +
+    '</select></div>';
+
+  h += '<div class="linha-campos">' +
+    '<div class="campo"><label for="a-' + esc(it.id) + '">Ação</label>' +
+    '<p class="dica">Verbo no infinitivo, concreto, com prazo. “Contratar segundo integrador até 15/09”.</p>' +
+    '<textarea id="a-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="acao">' + esc(it.acao) + '</textarea></div>' +
+    '<div class="campo"><label for="d-' + esc(it.id) + '">Dono da decisão humana (risk owner)</label>' +
+    '<p class="dica">Uma pessoa nomeada. Não “o PMO”, não “a equipe”.</p>' +
+    '<input type="text" id="d-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="dono" value="' + esc(it.dono) + '"></div>' +
+    '</div>';
+
+  h += '<div class="linha-campos">' +
+    '<div class="campo"><label for="g-' + esc(it.id) + '">Gatilho</label>' +
+    '<p class="dica">O sinal observável que dispara a ação. “Se a carga de teste não fechar até 01/09”.</p>' +
+    '<textarea id="g-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="gatilho">' + esc(it.gatilho) + '</textarea></div>' +
+    '<div class="campo"><label for="rr-' + esc(it.id) + '">Risco residual</label>' +
+    '<p class="dica">O que sobra depois da resposta. Se ninguém sabe dizer, a resposta não foi pensada até o fim.</p>' +
+    '<textarea id="rr-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="residual">' + esc(it.residual) + '</textarea></div>' +
+    '</div>';
+
+  h += '<div class="campo"><label for="rs-' + esc(it.id) + '">Risco secundário — “e o que essa ação pode causar?”</label>' +
+    '<textarea id="rs-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="riscoSecundario">' + esc(it.riscoSecundario) + '</textarea></div>' +
+    '<div class="linha-campos">' +
+    '<div class="campo"><label for="rsf-' + esc(it.id) + '">Severidade estimada do risco secundário</label>' +
+    '<select id="rsf-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="riscoSecundarioFaixa">' +
+    opcoes(FAIXAS_A.slice().reverse().map(function (f) {
+      return { valor: f.chave, rotulo: f.emoji + ' ' + f.rotulo + ' (' + f.min + '–' + f.max + ')' };
+    }), it.riscoSecundarioFaixa) + '</select></div>' +
+    '<div class="campo"><span class="rotulo" aria-hidden="true">&nbsp;</span>' +
+    '<label class="check"><input type="checkbox" data-item="' + esc(it.id) + '" data-campo="riscoSecundarioAvaliado"' +
+    (it.riscoSecundarioAvaliado ? ' checked' : '') + '><span>Avaliei e esta resposta não cria risco secundário</span></label>' +
+    '<div class="acoes"><button type="button" class="btn btn-fantasma btn-mini" data-promover="' + esc(it.id) + '">Registrar risco secundário como item novo</button></div>' +
+    '</div></div>';
+
+  h += '<div data-cond-r="' + esc(it.id) + '"></div>';
+  h += '<div class="derivado" data-derivado-r="' + esc(it.id) + '"></div></div>';
+  return h;
+}
+
+/* Campos que só existem para certas estratégias. Ficam FORA do bloco derivado
+   para que digitar neles não force um re-render e roube o foco. */
+function renderCondR(it) {
+  var alvo = $('[data-cond-r="' + it.id + '"]');
+  if (!alvo) return;
+  var h = '';
+  if (it.estrategia === 'Aceitar') {
+    h += '<div class="campo"><label for="j-' + esc(it.id) + '">Justificativa da aceitação <span class="pilula pilula-aviso">obrigatória</span></label>' +
+      '<p class="dica">Regra 2: Aceitar é a única estratégia que precisa de motivo escrito — é a mais usada por omissão.</p>' +
+      '<textarea id="j-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="justificativa">' + esc(it.justificativa) + '</textarea></div>';
+  }
+  if (it.estrategia === 'Escalar') {
+    h += '<div class="campo"><label for="de-' + esc(it.id) + '">Destinatário do escalonamento <span class="pilula pilula-aviso">obrigatório</span></label>' +
+      '<p class="dica">Regra 5: escalar sem nomear quem recebe é abandonar, não escalar.</p>' +
+      '<input type="text" id="de-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="destinatario" value="' + esc(it.destinatario) + '"></div>';
+  }
+  if (it.estrategia === 'Evitar' || it.estrategia === 'Explorar') {
+    h += '<div class="campo"><label for="rp-' + esc(it.id) + '">Pendência de replanejamento</label>' +
+      '<p class="dica">Regra 3: ' + esc(it.estrategia) + ' muda o plano do projeto. Isto sai no registro como pendência, não como anotação.</p>' +
+      '<textarea id="rp-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="replanejamento" ' +
+      'placeholder="Replanejar o cronograma / escopo afetado por: ' + esc(txt(it.acao) || 'a ação escolhida') + '">' +
+      esc(it.replanejamento) + '</textarea></div>';
+  }
+  alvo.innerHTML = h;
+}
+
+/* O bloco derivado da Etapa 4 tem quatro zonas independentes. O esqueleto é
+   montado uma vez só; cada edição atualiza apenas as zonas afetadas. É o que
+   permite digitar em "Dono" sem remontar os checkboxes de HITL sob a mão de
+   quem está clicando neles. */
+function renderDerivadoR(it) {
+  var alvo = $('[data-derivado-r="' + it.id + '"]');
+  if (!alvo) return;
+  if (!alvo.querySelector('[data-hitl-r]')) {
+    alvo.innerHTML =
+      '<div data-dono-r="' + esc(it.id) + '" aria-live="polite"></div>' +
+      '<div data-regras-r="' + esc(it.id) + '"></div>' +
+      '<h4>Validação humana obrigatória (HITL — risk owner + governança)</h4>' +
+      '<div data-hitl-r="' + esc(it.id) + '"></div>' +
+      '<div data-status-r="' + esc(it.id) + '" aria-live="polite"></div>';
+  }
+  renderDonoR(it);
+  renderRegrasR(it);
+  renderHitlR(it);
+  renderStatusR(it);
+}
+
+function renderDonoR(it) {
+  var alvo = $('[data-dono-r="' + it.id + '"]');
+  if (!alvo) return;
+  var dono = analisarDono(it.dono);
+  if (dono.estado === 'generico') {
+    alvo.innerHTML = '<div class="nota nota-aviso"><p>' + esc(dono.mensagem) + '</p></div>';
+  } else if (dono.estado === 'vazio') {
+    alvo.innerHTML = '<div class="nota nota-erro"><p><b>Corte obrigatório (critério de saída).</b> ' + esc(CORTE_OBRIGATORIO) +
+      ' O item continua registrado — o que fica bloqueado é o <b>encerramento</b>. Sem dono, ele sai no export na seção ' +
+      '<code>Pendente de dono</code>, para que a lacuna fique visível em vez de silenciosa.</p></div>';
+  } else {
+    alvo.innerHTML = '';
+  }
+}
+
+function renderRegrasR(it) {
+  var alvo = $('[data-regras-r="' + it.id + '"]');
+  if (!alvo) return;
+  var h = '<h4>Regras de consistência</h4><ul>';
+  regrasConsistencia(it).forEach(function (r) {
+    var marca = !r.aplica ? '—' : (r.ok ? '✓' : '✗');
+    var classe = !r.aplica ? 'pilula-neutra' : (r.ok ? 'pilula-baixo' : 'pilula-alto');
+    h += '<li><span class="pilula ' + classe + '">' + marca + ' Regra ' + r.n + '</span> ' + esc(r.mensagem) + '</li>';
+  });
+  alvo.innerHTML = h + '</ul>';
+}
+
+function assinaturaDosGatilhos(it) {
+  return gatilhosHITL(it).map(function (g) { return g.id; }).join(',');
+}
+
+function renderHitlR(it) {
+  var alvo = $('[data-hitl-r="' + it.id + '"]');
+  if (!alvo) return;
+  var gats = gatilhosHITL(it);
+  var assinatura = assinaturaDosGatilhos(it);
+  if (alvo.getAttribute('data-assinatura') === assinatura) {
+    /* mesmo conjunto de gatilhos: atualiza só os carimbos */
+    gats.forEach(function (g) {
+      var c = $('[data-carimbo="' + it.id + '|' + g.id + '"]');
+      if (c) c.textContent = it.confirmacoes[g.id] ? '· confirmado em ' + dataBR(it.confirmacoes[g.id]) : '';
+    });
+    return;
+  }
+  var h = '';
+  if (!gats.length) {
+    h = '<p><small>Nenhum gatilho disparado para este item. A ferramenta não decide: a assinatura continua sendo humana.</small></p>';
+  } else {
+    h = '<div class="nota nota-aviso"><p>A ferramenta <b>não segue no automático</b> aqui. Confirme cada ponto explicitamente.</p></div>';
+    gats.forEach(function (g) {
+      var conf = it.confirmacoes[g.id];
+      h += '<label class="check"><input type="checkbox" data-item="' + esc(it.id) + '" data-confirmar="' + esc(g.id) + '"' +
+        (conf ? ' checked' : '') + '><span>' + esc(g.texto) +
+        ' <small data-carimbo="' + esc(it.id) + '|' + esc(g.id) + '">' +
+        (conf ? '· confirmado em ' + esc(dataBR(conf)) : '') + '</small></span></label>';
+    });
+  }
+  alvo.setAttribute('data-assinatura', assinatura);
+  alvo.innerHTML = h;
+}
+
+function renderStatusR(it) {
+  var alvo = $('[data-status-r="' + it.id + '"]');
+  if (!alvo) return;
+  var bloqueios = bloqueiosDe(it);
+  if (bloqueios.length) {
+    alvo.innerHTML = '<div class="nota nota-erro"><p><b>Encerramento bloqueado.</b></p><ul>' +
+      bloqueios.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></div>';
+  } else {
+    alvo.innerHTML = '<div class="nota nota-acc"><p><b>Item pronto para encerrar.</b> Registre a decisão da validação humana na Etapa 5.</p></div>';
+  }
+}
+
+function painelReguaB() {
+  var candidatos = estado.itens.filter(function (it) { return !ehRascunho(it) && (txt(it.acao) || it.estrategia); });
+  var h = '<div class="nota nota-acc"><p><b>Régua B — fórmula da Aula 2. Bloco próprio, nesta aba e em nenhuma outra.</b><br>' +
+    'Ela prioriza <b>iniciativas</b> — respostas candidatas disputando o mesmo orçamento ou a mesma pessoa — e responde ' +
+    '“qual ação vale implementar primeiro?”. Não prioriza riscos e não se soma à Régua A. Por isso a severidade não aparece aqui.</p></div>';
+
+  h += '<div class="bloco">';
+  h += '<h3>Fórmula</h3>' +
+    '<p><code>Prioridade = ((Impacto × 30) + (Viabilidade × 20) + (Dados × 20) + (Segurança × 15) + (Valor × 15)) ÷ 5</code></p>' +
+    '<p><small>Escala: <b>1 baixa · 3 média · 5 alta</b> (2 e 4 são passos intermediários — os casos de verificação da Aula 2 os usam). ' +
+    'Resultado de 20 a 100.</small></p>';
+  h += '<div class="nota"><p><b>Corte obrigatório, e vale antes da pontuação:</b> ' + esc(CORTE_OBRIGATORIO) +
+    ' Um item sem dono não recebe nota — é devolvido.</p></div>';
+  h += '</div>';
+
+  h += '<div class="bloco"><h3>Respostas candidatas <span class="pilula pilula-neutra">' + candidatos.length + '</span></h3>';
+  if (!candidatos.length) {
+    h += '<p class="vazio">Nenhuma resposta candidata ainda. Escolha uma estratégia ou descreva uma ação na aba “Planejar respostas”.</p>';
+  } else {
+    candidatos.forEach(function (it) { h += cartaoReguaB(it); });
+  }
+  h += '</div>';
+
+  h += '<div class="bloco"><h3>Ordem de implementação</h3><div class="derivado" id="ranking-b"></div></div>';
+
+  h += '<details><summary>Critérios, pesos e faixas da Régua B</summary>' + tabelasReguaB() + '</details>';
+  h += '<div class="acoes"><button type="button" class="btn btn-fantasma" data-ir="3">← Priorizar</button>' +
+    '<button type="button" class="btn" data-ir="5">Ir para Registrar →</button></div>';
+  return h;
+}
+
+function cartaoReguaB(it) {
+  var devolvido = pendenteDeDono(it);
+  var h = '<div class="item"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+    pilulaPolaridade(it.polaridade) +
+    (it.estrategia ? '<span class="pilula pilula-neutra">' + esc(it.estrategia) + '</span>' : '') +
+    (devolvido ? '<span class="pilula pilula-alto">Devolvido — sem dono</span>' : '') + '</div>' +
+    '<p class="enunciado"><b>Ação:</b> ' + esc(txt(it.acao) || '⟨ação ainda não descrita⟩') + '</p>';
+  if (devolvido) {
+    h += '<div class="nota nota-erro"><p>' + esc(CORTE_OBRIGATORIO) +
+      ' O corte vale <b>antes</b> da pontuação: esta resposta não recebe nota até ter um dono da decisão humana (risk owner) nomeado.</p></div></div>';
+    return h;
+  }
+  h += '<div class="linha-campos">';
+  CRITERIOS_B.forEach(function (c) {
+    h += '<div class="campo"><label for="' + esc(c.chave) + '-' + esc(it.id) + '">' + esc(c.titulo) + ' <small>(' + c.peso + '%)</small></label>' +
+      '<p class="dica">' + esc(c.pergunta) + '</p>' +
+      '<select id="' + esc(c.chave) + '-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="' + esc(c.chave) + '" data-num="1" data-b="1">' +
+      opcoesNotaB(it[c.chave]) + '</select></div>';
+  });
+  h += '</div>';
+  h += '<div class="derivado" data-derivado-b="' + esc(it.id) + '" aria-live="polite"></div></div>';
+  return h;
+}
+
+function renderDerivadoB(it) {
+  var alvo = $('[data-derivado-b="' + it.id + '"]');
+  if (!alvo) return;
+  var p = prioridadeBDoItem(it), f = faixaB(p);
+  var h = '<div class="sumario">' +
+    CRITERIOS_B.map(function (c) {
+      return '<span>' + esc(c.titulo) + '<b>' + (ehNota(it[c.chave]) ? it[c.chave] : '—') + '</b></span>';
+    }).join('') +
+    '<span>Prioridade<b>' + (p === null ? '—' : p) + '</b></span></div>';
+  if (f) {
+    h += '<div class="nota"><p>' + pilulaFaixaB(p) + ' <b>' + esc(f.rotulo) + ' (' + f.min + '–' + f.max + ').</b> ' + esc(f.decisao) + '</p></div>';
+  } else {
+    h += '<div class="nota nota-aviso"><p>Pontue os cinco critérios para calcular a prioridade.</p></div>';
+  }
+  alvo.innerHTML = h;
+}
+
+function renderRankingB() {
+  var alvo = $('#ranking-b');
+  if (!alvo) return;
+  var pontuados = estado.itens.filter(function (it) {
+    return !pendenteDeDono(it) && prioridadeBDoItem(it) !== null;
+  }).sort(function (a, b) { return prioridadeBDoItem(b) - prioridadeBDoItem(a); });
+  if (!pontuados.length) {
+    alvo.innerHTML = '<p class="vazio">Nenhuma resposta pontuada ainda.</p>';
+    return;
+  }
+  alvo.innerHTML = '<div class="rolagem"><table><thead><tr><th>#</th><th>Item</th><th>Ação</th><th>Dono</th>' +
+    CRITERIOS_B.map(function (c) { return '<th>' + esc(c.titulo.charAt(0)) + '</th>'; }).join('') +
+    '<th>Prioridade</th><th>Decisão</th></tr></thead><tbody>' +
+    pontuados.map(function (it, i) {
+      var p = prioridadeBDoItem(it), f = faixaB(p);
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(it.id) + '</td><td>' + esc(txt(it.acao)) + '</td><td>' + esc(txt(it.dono)) + '</td>' +
+        CRITERIOS_B.map(function (c) { return '<td>' + it[c.chave] + '</td>'; }).join('') +
+        '<td><b>' + p + '</b></td><td>' + esc(f ? f.rotulo : '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<p><small>Implementar em ordem de prioridade. É onde a fórmula da Aula 2 entra no ciclo de riscos.</small></p>';
+}
+
+function tabelasEstrategias() {
+  var h = '<div class="rolagem"><table><caption>Ameaças</caption><thead><tr><th>Estratégia</th><th>O que é</th><th>Quando usar</th><th>Pergunta de escolha</th></tr></thead><tbody>' +
+    ESTRATEGIAS.ameaca.map(function (s) {
+      return '<tr><td><b>' + esc(s.nome) + '</b></td><td>' + esc(s.oque) + '</td><td>' + esc(s.quando) + '</td><td>' + esc(s.escolha) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  h += '<div class="rolagem"><table><caption>Oportunidades</caption><thead><tr><th>Estratégia</th><th>O que é</th><th>Espelha</th></tr></thead><tbody>' +
+    ESTRATEGIAS.oportunidade.map(function (s) {
+      return '<tr><td><b>' + esc(s.nome) + '</b></td><td>' + esc(s.oque) + '</td><td>' + esc(s.espelha) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  h += '<div class="rolagem"><table><caption>Campos obrigatórios de uma resposta</caption><thead><tr><th>Campo</th><th>Regra</th></tr></thead><tbody>' +
+    '<tr><td><b>Estratégia</b></td><td>Uma das dez acima.</td></tr>' +
+    '<tr><td><b>Ação</b></td><td>Verbo no infinitivo, concreto, com prazo.</td></tr>' +
+    '<tr><td><b>Dono</b></td><td>Uma pessoa nomeada. Não “o PMO”, não “a equipe”.</td></tr>' +
+    '<tr><td><b>Gatilho</b></td><td>O sinal observável que dispara a ação.</td></tr>' +
+    '<tr><td><b>Risco residual</b></td><td>O que sobra depois da resposta.</td></tr>' +
+    '</tbody></table></div>';
+  h += '<ol>' + [
+    '<b>Faixa alta exige resposta.</b> Nenhum item 🔴 fecha a sessão sem estratégia, ação, dono e gatilho.',
+    '<b>Aceitar exige justificativa.</b> É a única estratégia que precisa de motivo escrito — é a mais usada por omissão.',
+    '<b>Evitar e Explorar mudam o plano.</b> Escolher uma delas gera uma pendência de replanejamento.',
+    '<b>Resposta cria risco.</b> Perguntar sempre: “e o que essa ação pode causar?”.',
+    '<b>Escalar exige destinatário.</b> Escalar sem nomear quem recebe é abandonar, não escalar.'
+  ].map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ol>';
+  return h;
+}
+
+function tabelasReguaB() {
+  var h = '<div class="rolagem"><table><thead><tr><th>Critério</th><th>Peso</th><th>Pergunta executiva</th></tr></thead><tbody>' +
+    CRITERIOS_B.map(function (c) { return '<tr><td><b>' + esc(c.titulo) + '</b></td><td>' + c.peso + '%</td><td>' + esc(c.pergunta) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  h += '<div class="rolagem"><table><thead><tr><th>Faixa</th><th>Prioridade</th><th>Decisão</th></tr></thead><tbody>' +
+    FAIXAS_B.map(function (f) { return '<tr><td>' + f.min + ' – ' + f.max + '</td><td><b>' + esc(f.rotulo) + '</b></td><td>' + esc(f.decisao) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  h += '<div class="rolagem"><table><caption>Casos de verificação (projeto de implantação de ERP, Aula 2)</caption>' +
+    '<thead><tr><th>Caso de uso (hipótese de valor)</th><th>I</th><th>V</th><th>D</th><th>S</th><th>Val</th><th>Calculado aqui</th></tr></thead><tbody>' +
+    [['Previsão de atrasos críticos no cronograma', 5, 4, 4, 4, 5],
+     ['Análise de riscos do go-live do ERP', 5, 4, 3, 3, 5],
+     ['Geração automática de atas e pendências', 3, 5, 5, 4, 3]].map(function (c) {
+      return '<tr><td>' + esc(c[0]) + '</td><td>' + c[1] + '</td><td>' + c[2] + '</td><td>' + c[3] + '</td><td>' + c[4] + '</td><td>' + c[5] + '</td>' +
+        '<td><b>' + prioridadeB(c[1], c[2], c[3], c[4], c[5]) + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>';
+  h += '<div class="nota"><p><b>Nota de procedência.</b> A versão em PDF da Aula 2 traz, nestas mesmas linhas, os valores 88 / 84 / 74, ' +
+    'e os Exemplos 2 e 3 têm divergências semelhantes. ' +
+    'A versão corrigida do slide — que acrescenta a caixa da fórmula e detalha o cálculo — traz 89 / 82 / 79, que é o que a fórmula produz. ' +
+    '<b>Este método segue a fórmula.</b> Aritmética manual em matriz de priorização diverge com facilidade; calcular de forma consistente ' +
+    'é justamente o que a ferramenta automatiza — e é o que o autoteste no rodapé verifica a cada carga da página.</p></div>';
+  return h;
+}
+
+/* --- Etapa 5: Registrar e exportar --- */
+function renderEtapa5() {
+  var h = cabeca(5) +
+    '<p>O registro carrega os cinco elos da rastreabilidade (auditabilidade / trilha de decisão): ' +
+    'Entrada → Processamento → Saída → Validação → Registro. Um risco exportado sem essa cadeia é uma opinião com formatação bonita.</p></div>';
+
+  h += '<div class="bloco"><h3>Validação humana desta sessão</h3>' +
+    '<div class="nota"><p><b>Fluxo de validação (Aula 2):</b><br>' + esc(FLUXO_VALIDACAO) + '</p></div>' +
+    '<div class="nota nota-aviso"><p><b>' + esc(NOTA_COLAPSO) + '</b></p></div>' +
+    '<div class="campo"><label for="conduzida-por">Sessão conduzida por (opcional)</label>' +
+    '<p class="dica">Quem operou a ferramenta. Não substitui o dono da decisão humana de cada item.</p>' +
+    '<input type="text" id="conduzida-por" data-sessao="conduzidaPor" value="' + esc(estado.conduzidaPor) + '"></div>' +
+    '</div>';
+
+  h += '<div class="bloco"><h3>Fechamento dos itens</h3>' +
+    '<p><small>O corte obrigatório bloqueia o <b>encerramento</b>, não o registro. Itens sem dono continuam no registro — na seção ' +
+    '<code>Pendente de dono</code>.</small></p>' +
+    '<div class="derivado" id="fechamento"></div></div>';
+
+  h += '<div class="bloco"><h3>Registro de riscos</h3><div class="derivado" id="previa"></div></div>';
+
+  h += '<div class="bloco"><h3>Exportar</h3>' +
+    '<p><small>CSV com separador <code>;</code> e BOM UTF-8 — abre direto no Excel em português e no Google Sheets, com acentuação correta. ' +
+    'O download é gerado no seu navegador; nenhum dado sai da máquina.</small></p>' +
+    '<div class="acoes">' +
+    '<button type="button" class="btn" id="btn-csv">Baixar CSV</button>' +
+    '<button type="button" class="btn" id="btn-md">Baixar Markdown</button>' +
+    '<button type="button" class="btn btn-fantasma" id="btn-copiar-csv">Copiar CSV</button>' +
+    '<button type="button" class="btn btn-fantasma" id="btn-copiar-md">Copiar Markdown</button>' +
+    '<span class="acoes-fim"><button type="button" class="btn btn-fantasma" data-ir="4">← Responder</button></span>' +
+    '</div><div class="derivado" id="status-export"></div></div>';
+
+  h += '<details><summary>Os cinco elos da rastreabilidade</summary><div class="rolagem"><table>' +
+    '<thead><tr><th>Elo</th><th>Conteúdo</th><th>Campo no registro</th></tr></thead><tbody>' +
+    '<tr><td><b>Entrada</b></td><td>Dados usados</td><td>Contexto + técnica aplicada</td></tr>' +
+    '<tr><td><b>Processamento</b></td><td>Prompt, modelo e regra</td><td>Técnica + fórmula + versão do método</td></tr>' +
+    '<tr><td><b>Saída</b></td><td>Recomendação gerada</td><td>Enunciado + severidade + resposta proposta</td></tr>' +
+    '<tr><td><b>Validação</b></td><td>Humano aprova ou ajusta</td><td>Dono + data + aceite/ajuste</td></tr>' +
+    '<tr><td><b>Registro</b></td><td>Decisão e evidência</td><td>Linha exportada, imutável</td></tr>' +
+    '</tbody></table></div></details>';
+
+  h += blocoLimitesResumo();
+  return h;
+}
+
+function renderFechamento() {
+  var alvo = $('#fechamento');
+  if (!alvo) return;
+  if (!estado.itens.length) {
+    alvo.innerHTML = '<p class="vazio">Nenhum item registrado. Volte à Etapa 2.</p>';
+    return;
+  }
+  alvo.innerHTML = estado.itens.map(function (it) {
+    var bloqueios = bloqueiosDe(it), pronto = bloqueios.length === 0;
+    var h = '<div class="item"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
+      pilulaPolaridade(it.polaridade) + pilulaFaixaA(severidadeDoItem(it)) +
+      '<span class="pilula ' + (it.encerrado ? 'pilula-baixo' : (pendenteDeDono(it) ? 'pilula-alto' : 'pilula-neutra')) + '">' +
+      esc(statusDe(it)) + '</span></div>' +
+      '<p class="enunciado">' + esc(enunciadoDe(it)) + '</p>';
+    h += '<div class="linha-campos">' +
+      '<div class="campo"><label for="dec-' + esc(it.id) + '">Decisão da validação humana</label>' +
+      '<select id="dec-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="decisao">' +
+      opcoes([{ valor: 'aceite', rotulo: 'Aceite — a recomendação foi aprovada como está' },
+              { valor: 'ajuste', rotulo: 'Ajuste — a recomendação foi alterada pelo humano' }], it.decisao) +
+      '</select></div>' +
+      '<div class="campo"><span class="rotulo">Encerramento</span>' +
+      '<div class="acoes"><button type="button" class="btn' + (pronto ? '' : ' btn-fantasma') +
+      '" data-encerrar="' + esc(it.id) + '"' + (pronto ? '' : ' disabled') + '>' +
+      (it.encerrado ? 'Reabrir item' : 'Encerrar item') + '</button></div></div></div>';
+    if (bloqueios.length) {
+      /* o corte obrigatório só é nomeado no título quando é ele que está bloqueando */
+      h += '<div class="nota nota-erro"><p><b>Encerramento bloqueado' +
+        (pendenteDeDono(it) ? ' — ' + esc(CORTE_OBRIGATORIO) : '.') + '</b></p><ul>' +
+        bloqueios.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></div>';
+    } else if (it.encerrado) {
+      h += '<div class="nota nota-acc"><p>Encerrado em ' + esc(dataBR(it.validadoEm)) + ' por <b>' + esc(txt(it.dono)) +
+        '</b> · decisão: ' + esc(it.decisao === 'ajuste' ? 'ajuste' : 'aceite') + '.</p></div>';
+    }
+    h += '</div>';
+    return h;
+  }).join('');
+}
+
+function renderPrevia() {
+  var alvo = $('#previa');
+  if (!alvo) return;
+  if (!estado.itens.length) {
+    alvo.innerHTML = '<p class="vazio">Registro vazio.</p>';
+    return;
+  }
+  var comDono = estado.itens.filter(function (it) { return !pendenteDeDono(it); });
+  var semDono = estado.itens.filter(pendenteDeDono);
+
+  function tabela(lista) {
+    return '<div class="rolagem"><table><thead><tr>' +
+      '<th>ID</th><th>Polaridade</th><th>Enunciado</th><th>Técnica</th><th>P</th><th>I</th><th>Sev.</th><th>Faixa</th>' +
+      '<th>Qualidade</th><th>Estratégia</th><th>Ação</th><th>Dono</th><th>Gatilho</th><th>Risco residual</th><th>Status</th>' +
+      '</tr></thead><tbody>' +
+      lista.map(function (it) {
+        var sev = severidadeDoItem(it), f = faixaA(sev);
+        var q = QUALIDADE_DADO.filter(function (x) { return x.chave === it.qualidade; })[0];
+        var tec = tecnicaPorId(it.tecnica);
+        return '<tr><td>' + esc(it.id) + '</td><td>' + esc(it.polaridade === 'oportunidade' ? 'Oportunidade' : 'Ameaça') + '</td>' +
+          '<td>' + esc(enunciadoDe(it)) + '</td><td>' + esc(tec ? tec.id + ' ' + tec.tecnica : '—') + '</td>' +
+          '<td>' + (ehNota(it.probabilidade) ? it.probabilidade : '—') + '</td>' +
+          '<td>' + (ehNota(impactoDoItem(it)) ? impactoDoItem(it) : '—') + '</td>' +
+          '<td>' + (sev === null ? '—' : sev) + '</td>' +
+          '<td>' + (f ? f.emoji + ' ' + esc(f.rotulo) : '—') + '</td>' +
+          '<td>' + (q ? q.emoji + ' ' + esc(q.rotulo) : '—') + '</td>' +
+          '<td>' + esc(it.estrategia || '—') + '</td><td>' + esc(txt(it.acao) || '—') + '</td>' +
+          '<td>' + esc(txt(it.dono) || '—') + '</td><td>' + esc(txt(it.gatilho) || '—') + '</td>' +
+          '<td>' + esc(txt(it.residual) || '—') + '</td><td>' + esc(statusDe(it)) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  var h = '<h4>Registro de riscos (Régua A — Probabilidade × Impacto)</h4>';
+  h += comDono.length ? tabela(comDono) : '<p class="vazio">Nenhum item com dono nomeado.</p>';
+  h += '<h4>Pendente de dono</h4>';
+  if (semDono.length) {
+    h += '<div class="nota nota-erro"><p><b>' + semDono.length + ' item(ns) sem dono da decisão humana (risk owner).</b> ' +
+      esc(CORTE_OBRIGATORIO) + ' Eles saem no export numa seção própria, <code>Pendente de dono</code>.</p></div>' + tabela(semDono);
+  } else {
+    h += '<p><small>Nenhum item pendente de dono.</small></p>';
+  }
+  alvo.innerHTML = h;
+}
+
+function renderStatusExport() {
+  var alvo = $('#status-export');
+  var vazio = !exportacaoDisponivel();
+  ['btn-csv', 'btn-md', 'btn-copiar-csv', 'btn-copiar-md'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.disabled = vazio;
+  });
+  if (!alvo) return;
+  alvo.innerHTML = vazio
+    ? '<div class="nota nota-aviso"><p>Exportação desabilitada: o registro está vazio.</p></div>'
+    : '<div class="nota"><p>' + estado.itens.length + ' item(ns) no registro · ' +
+      estado.itens.filter(pendenteDeDono).length + ' pendente(s) de dono · ' +
+      estado.itens.filter(function (it) { return it.encerrado; }).length + ' encerrado(s).</p></div>';
+}
+
+function blocoLimitesResumo() {
+  return '<div class="nota"><p><small><b>A ferramenta não decide.</b> Organiza evidência e calcula de forma consistente; ' +
+    'a assinatura é humana. Ela também não sabe do seu projeto: toda nota vem de quem preenche. ' +
+    'Não substitui o plano de gerenciamento de riscos, a análise quantitativa nem o monitoramento contínuo. ' +
+    'Nenhum dado sai da máquina. <a href="#" data-rolar-limites="1">Limites completos ↓</a></small></p></div>';
+}
+
+/* =====================================================================
+   8. EXPORTAÇÃO — CSV e Markdown, via Blob, sem biblioteca
+   ===================================================================== */
+var SEP = ';';
+
+/* Excel, Sheets e LibreOffice executam como fórmula toda célula que começa com
+   um destes caracteres. Todo campo deste registro é texto digitado pelo usuário:
+   sem neutralizar, abrir o CSV executa o conteúdo. Numa ferramenta cujo argumento
+   é governança, isso seria o pior defeito possível. O apóstrofo à frente é a
+   neutralização padrão — a planilha passa a tratar a célula como texto, e o
+   leitor humano continua lendo a frase inteira. */
+var PREFIXOS_DE_FORMULA = ['=', '+', '-', '@', '\t', '\r'];
+
+function neutralizarFormula(v) {
+  var s = String(v == null ? '' : v);
+  if (s.length && PREFIXOS_DE_FORMULA.indexOf(s.charAt(0)) !== -1) return "'" + s;
+  return s;
+}
+
+function campoCSV(v) {
+  var s = neutralizarFormula(v);
+  if (s.indexOf(SEP) !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1 || s.indexOf('\r') !== -1) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function eloEntrada(it) {
+  var tec = tecnicaPorId(it.tecnica);
+  return 'Contexto: ' + txt(estado.enquadramento.contexto) +
+    ' | Dor: ' + txt(estado.enquadramento.dor) +
+    ' | Dados: ' + txt(estado.enquadramento.dados) +
+    ' | Riscos declarados: ' + txt(estado.enquadramento.riscos) +
+    ' | Valor: ' + txt(estado.enquadramento.valor) +
+    ' | Técnica aplicada: ' + (tec ? tec.id + ' ' + tec.tecnica + ' (' + tec.origem_pmbok + ')' : 'não registrada');
+}
+function eloProcessamento(it) {
+  var tec = tecnicaPorId(it.tecnica);
+  var p = prioridadeBDoItem(it);
+  return 'Técnica: ' + (tec ? tec.id + ' ' + tec.tecnica : 'não registrada') +
+    ' | Pergunta de disparo: ' + (tec ? tec.pergunta_disparo : '—') +
+    ' | Régua A: ' + FORMULA_A +
+    (p === null ? '' : ' | Régua B: ' + FORMULA_B) +
+    ' | Versão das regras: ' + VERSAO_DAS_REGRAS +
+    ' | Sem modelo externo: cálculo local e determinístico, sem chamada de rede';
+}
+function eloSaida(it) {
+  var sev = severidadeDoItem(it), f = faixaA(sev);
+  return 'Enunciado: ' + enunciadoDe(it) +
+    ' | Severidade: ' + (sev === null ? 'não priorizado' : sev + ' (' + (f ? f.rotulo : '—') + ')') +
+    ' | Resposta proposta: ' + (it.estrategia ? it.estrategia + ' — ' + (txt(it.acao) || 'ação não descrita') : 'nenhuma');
+}
+function eloValidacao(it) {
+  var dono = analisarDono(it.dono);
+  var gats = gatilhosHITL(it);
+  return 'Dono: ' + (txt(it.dono) || 'PENDENTE — ' + CORTE_OBRIGATORIO) +
+    (dono.estado === 'generico' ? ' (aviso: parece área, não pessoa)' : '') +
+    ' | Data: ' + (it.validadoEm ? dataBR(it.validadoEm) : 'não encerrado') +
+    ' | Decisão: ' + (it.decisao || 'não registrada') +
+    ' | Gatilhos HITL: ' + (gats.length ? gats.map(function (g) {
+        return g.id + (it.confirmacoes[g.id] ? ' confirmado ' + dataBR(it.confirmacoes[g.id]) : ' NÃO CONFIRMADO');
+      }).join(' / ') : 'nenhum') +
+    ' | Fluxo: ' + NOTA_COLAPSO;
+}
+function eloRegistro(it) {
+  return 'Linha exportada em ' + dataBR(new Date().toISOString()) +
+    ' | Sessão criada em ' + dataBR(estado.criadoEm) +
+    ' | Conduzida por: ' + (txt(estado.conduzidaPor) || 'não informado') +
+    ' | Status: ' + statusDe(it) +
+    ' | Item ' + it.id + ' do registro de riscos de “' + txt(estado.enquadramento.contexto) + '”';
+}
+
+var COLUNAS_EXPORT = [
+  'secao', 'id', 'contexto', 'polaridade', 'status', 'tecnica', 'origem_pmbok',
+  'causa', 'evento', 'efeito', 'enunciado',
+  'probabilidade', 'impacto_prazo', 'impacto_custo', 'impacto_escopo_qualidade', 'impacto',
+  'severidade', 'faixa_regua_a', 'qualidade_dado', 'investigue',
+  'estrategia', 'acao', 'dono', 'observacao_dono', 'gatilho', 'risco_residual',
+  'justificativa_aceitar', 'destinatario_escalar', 'pendencia_replanejamento',
+  'risco_secundario', 'severidade_risco_secundario',
+  'risco_secundario_promovido_para', 'origem_risco_secundario',
+  'regua_b_impacto', 'regua_b_viabilidade', 'regua_b_dados', 'regua_b_seguranca', 'regua_b_valor',
+  'regua_b_prioridade', 'faixa_regua_b',
+  'gatilhos_hitl', 'confirmacoes_hitl', 'validado_por', 'validado_em', 'decisao_validacao', 'fluxo_validacao',
+  'elo_entrada', 'elo_processamento', 'elo_saida', 'elo_validacao', 'elo_registro'
+];
+
+function linhaExport(it) {
+  var sev = severidadeDoItem(it), f = faixaA(sev);
+  var q = QUALIDADE_DADO.filter(function (x) { return x.chave === it.qualidade; })[0];
+  var tec = tecnicaPorId(it.tecnica);
+  /* metodo/escalas-e-priorizacao.md: o corte vale ANTES da pontuação — item sem
+     dono não recebe nota, é devolvido. A UI e o Markdown já aplicavam; o CSV era
+     o único artefato que emitia nota para item devolvido, e é o auditável. */
+  var devolvido = pendenteDeDono(it);
+  var pb = devolvido ? null : prioridadeBDoItem(it), fb = faixaB(pb);
+  var dono = analisarDono(it.dono);
+  var gats = gatilhosHITL(it);
+  var fs = FAIXAS_A.filter(function (x) { return x.chave === it.riscoSecundarioFaixa; })[0];
+  return {
+    secao: pendenteDeDono(it) ? 'Pendente de dono' : 'Registro de riscos',
+    id: it.id,
+    contexto: txt(estado.enquadramento.contexto),
+    polaridade: it.polaridade === 'oportunidade' ? 'Oportunidade' : 'Ameaça',
+    status: statusDe(it),
+    tecnica: tec ? tec.id + ' ' + tec.tecnica : '',
+    origem_pmbok: tec ? tec.origem_pmbok : '',
+    causa: txt(it.causa), evento: txt(it.evento), efeito: txt(it.efeito),
+    enunciado: enunciadoDe(it),
+    probabilidade: ehNota(it.probabilidade) ? it.probabilidade : '',
+    impacto_prazo: ehNota(it.impPrazo) ? it.impPrazo : '',
+    impacto_custo: ehNota(it.impCusto) ? it.impCusto : '',
+    impacto_escopo_qualidade: ehNota(it.impEscopo) ? it.impEscopo : '',
+    impacto: ehNota(impactoDoItem(it)) ? impactoDoItem(it) : '',
+    severidade: sev === null ? '' : sev,
+    faixa_regua_a: f ? f.emoji + ' ' + f.rotulo + ' (' + f.min + '-' + f.max + ')' : '',
+    qualidade_dado: q ? q.emoji + ' ' + q.rotulo : '',
+    investigue: precisaInvestigar(sev, it.qualidade) ? 'Investigue' : '',
+    estrategia: it.estrategia,
+    acao: txt(it.acao),
+    dono: txt(it.dono),
+    observacao_dono: dono.estado === 'ok' ? '' : dono.mensagem,
+    gatilho: txt(it.gatilho),
+    risco_residual: txt(it.residual),
+    justificativa_aceitar: txt(it.justificativa),
+    destinatario_escalar: txt(it.destinatario),
+    pendencia_replanejamento: (it.estrategia === 'Evitar' || it.estrategia === 'Explorar')
+      ? (txt(it.replanejamento) || 'Replanejamento pendente: ' + it.estrategia + ' muda o plano do projeto') : '',
+    risco_secundario: it.riscoSecundarioAvaliado && !txt(it.riscoSecundario)
+      ? 'Avaliado: nenhum' : txt(it.riscoSecundario),
+    severidade_risco_secundario: fs ? fs.emoji + ' ' + fs.rotulo : '',
+    risco_secundario_promovido_para: txt(it.promovidoPara),
+    origem_risco_secundario: txt(it.origemRiscoSecundario),
+    regua_b_impacto: devolvido || !ehNota(it.bImpacto) ? '' : it.bImpacto,
+    regua_b_viabilidade: devolvido || !ehNota(it.bViabilidade) ? '' : it.bViabilidade,
+    regua_b_dados: devolvido || !ehNota(it.bDados) ? '' : it.bDados,
+    regua_b_seguranca: devolvido || !ehNota(it.bSeguranca) ? '' : it.bSeguranca,
+    regua_b_valor: devolvido || !ehNota(it.bValor) ? '' : it.bValor,
+    regua_b_prioridade: pb === null ? '' : pb,
+    faixa_regua_b: devolvido ? 'Devolvido — sem dono, o caso não recebe nota'
+                             : (fb ? fb.rotulo + ' (' + fb.min + '-' + fb.max + ')' : ''),
+    gatilhos_hitl: gats.map(function (g) { return g.id + ': ' + g.texto; }).join(' / '),
+    confirmacoes_hitl: gats.map(function (g) {
+      return g.id + ' = ' + (it.confirmacoes[g.id] ? 'confirmado em ' + dataBR(it.confirmacoes[g.id]) : 'NÃO CONFIRMADO');
+    }).join(' / '),
+    validado_por: txt(it.dono),
+    validado_em: it.validadoEm ? dataBR(it.validadoEm) : '',
+    decisao_validacao: it.decisao,
+    fluxo_validacao: NOTA_COLAPSO,
+    elo_entrada: eloEntrada(it),
+    elo_processamento: eloProcessamento(it),
+    elo_saida: eloSaida(it),
+    elo_registro: eloRegistro(it),
+    elo_validacao: eloValidacao(it)
+  };
+}
+
+/* R1000 depois de R999: comparar id como string erra a partir do centésimo item.
+   E um comparador que nunca devolve 0 deixa a ordem indefinida para iguais. */
+function numeroDoId(id) {
+  var m = /^R(\d+)$/.exec(String(id == null ? '' : id));
+  return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+}
+
+function gerarCSV() {
+  var ordenados = estado.itens.slice().sort(function (a, b) {
+    var pa = pendenteDeDono(a) ? 1 : 0, pb = pendenteDeDono(b) ? 1 : 0;
+    if (pa !== pb) return pa - pb;
+    var na = numeroDoId(a.id), nb = numeroDoId(b.id);
+    if (na !== nb) return na - nb;
+    if (a.id === b.id) return 0;
+    return a.id < b.id ? -1 : 1;
+  });
+  var linhas = [COLUNAS_EXPORT.join(SEP)];
+  ordenados.forEach(function (it) {
+    var d = linhaExport(it);
+    linhas.push(COLUNAS_EXPORT.map(function (c) { return campoCSV(d[c]); }).join(SEP));
+  });
+  return linhas.join('\r\n') + '\r\n';
+}
+
+function mdEscapa(s) { return String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
+
+function gerarMarkdown() {
+  var comDono = estado.itens.filter(function (it) { return !pendenteDeDono(it); });
+  var semDono = estado.itens.filter(pendenteDeDono);
+  var l = [];
+
+  l.push('# Registro de riscos — ' + (txt(estado.enquadramento.contexto) || 'sessão sem contexto'));
+  l.push('');
+  l.push('**Sessão iniciada em:** ' + dataBR(estado.criadoEm) + '  ');
+  l.push('**Exportado em:** ' + dataBR(new Date().toISOString()) + '  ');
+  l.push('**Conduzida por:** ' + (txt(estado.conduzidaPor) || 'não informado') + '  ');
+  l.push('**Versão das regras:** ' + VERSAO_DAS_REGRAS);
+  l.push('');
+  l.push('## Enquadramento — mapa inicial de oportunidades (registro de partes interessadas + declaração de escopo)');
+  l.push('');
+  l.push('| Coluna | Pergunta | Resposta |');
+  l.push('|---|---|---|');
+  COLUNAS_ENQUADRAMENTO.forEach(function (c) {
+    l.push('| ' + mdEscapa(c.titulo) + ' | ' + mdEscapa(c.pergunta) + ' | ' + mdEscapa(txt(estado.enquadramento[c.chave]) || '—') + ' |');
+  });
+  l.push('');
+  l.push('## Validação humana (HITL — risk owner + governança)');
+  l.push('');
+  l.push('> **Corte obrigatório (critério de saída):** ' + CORTE_OBRIGATORIO);
+  l.push('');
+  l.push('**Fluxo de validação da Aula 2:** ' + FLUXO_VALIDACAO);
+  l.push('');
+  l.push('> ⚠️ ' + NOTA_COLAPSO);
+  l.push('');
+
+  function tabelaMD(lista) {
+    var out = [];
+    out.push('| ID | Polaridade | Enunciado | Técnica | P | I | Severidade | Faixa | Qualidade do dado | Estratégia | Ação | Dono | Gatilho | Risco residual | Status |');
+    out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+    lista.forEach(function (it) {
+      var sev = severidadeDoItem(it), f = faixaA(sev);
+      var q = QUALIDADE_DADO.filter(function (x) { return x.chave === it.qualidade; })[0];
+      var tec = tecnicaPorId(it.tecnica);
+      out.push('| ' + [
+        it.id,
+        it.polaridade === 'oportunidade' ? 'Oportunidade' : 'Ameaça',
+        mdEscapa(enunciadoDe(it)),
+        tec ? tec.id + ' ' + tec.tecnica : '—',
+        ehNota(it.probabilidade) ? it.probabilidade : '—',
+        ehNota(impactoDoItem(it)) ? impactoDoItem(it) : '—',
+        sev === null ? '—' : sev,
+        f ? f.emoji + ' ' + f.rotulo : '—',
+        q ? q.emoji + ' ' + q.rotulo : '—',
+        it.estrategia || '—',
+        mdEscapa(txt(it.acao) || '—'),
+        mdEscapa(txt(it.dono) || '—'),
+        mdEscapa(txt(it.gatilho) || '—'),
+        mdEscapa(txt(it.residual) || '—'),
+        statusDe(it)
+      ].join(' | ') + ' |');
+    });
+    return out;
+  }
+
+  l.push('## Registro de riscos (Régua A — Probabilidade × Impacto)');
+  l.push('');
+  l.push('`' + FORMULA_A + '`');
+  l.push('');
+  if (comDono.length) { l = l.concat(tabelaMD(comDono)); }
+  else { l.push('_Nenhum item com dono da decisão humana nomeado._'); }
+  l.push('');
+
+  l.push('## Pendente de dono');
+  l.push('');
+  if (semDono.length) {
+    l.push('> ' + CORTE_OBRIGATORIO + ' Os itens abaixo estão registrados mas **não podem ser encerrados**. A lacuna aparece aqui para ficar visível em vez de silenciosa.');
+    l.push('');
+    l = l.concat(tabelaMD(semDono));
+  } else {
+    l.push('_Nenhum item pendente de dono._');
+  }
+  l.push('');
+
+  var pontuados = estado.itens.filter(function (it) {
+    return !pendenteDeDono(it) && prioridadeBDoItem(it) !== null;
+  }).sort(function (a, b) { return prioridadeBDoItem(b) - prioridadeBDoItem(a); });
+  l.push('## Desempate de respostas (Régua B — fórmula da Aula 2)');
+  l.push('');
+  l.push('Prioriza **iniciativas e respostas**, não riscos. Régua separada da Régua A: as duas nunca são somadas.');
+  l.push('');
+  l.push('`' + FORMULA_B + '`');
+  l.push('');
+  if (pontuados.length) {
+    l.push('| # | ID | Ação | Dono | I | V | D | S | Val | Prioridade | Decisão |');
+    l.push('|---|---|---|---|---|---|---|---|---|---|---|');
+    pontuados.forEach(function (it, i) {
+      var p = prioridadeBDoItem(it), fb = faixaB(p);
+      l.push('| ' + [i + 1, it.id, mdEscapa(txt(it.acao) || '—'), mdEscapa(txt(it.dono) || '—'),
+        it.bImpacto, it.bViabilidade, it.bDados, it.bSeguranca, it.bValor, p, fb ? fb.rotulo : '—'].join(' | ') + ' |');
+    });
+  } else {
+    l.push('_Nenhuma resposta pontuada pela Régua B nesta sessão._');
+  }
+  l.push('');
+
+  var replan = estado.itens.filter(function (it) { return it.estrategia === 'Evitar' || it.estrategia === 'Explorar'; });
+  l.push('## Pendências de replanejamento');
+  l.push('');
+  if (replan.length) {
+    l.push('Regra 3 — Evitar e Explorar mudam o plano do projeto. Não são anotação no registro de riscos.');
+    l.push('');
+    replan.forEach(function (it) {
+      l.push('- **' + it.id + '** (' + it.estrategia + '): ' +
+        mdEscapa(txt(it.replanejamento) || 'Replanejamento pendente para: ' + (txt(it.acao) || 'a ação escolhida')));
+    });
+  } else {
+    l.push('_Nenhuma._');
+  }
+  l.push('');
+
+  var secundarios = estado.itens.filter(function (it) { return txt(it.riscoSecundario); });
+  l.push('## Riscos secundários levantados');
+  l.push('');
+  if (secundarios.length) {
+    l.push('Regra 4 — toda resposta pode introduzir um risco novo. Cada linha abaixo deve entrar no registro como item novo.');
+    l.push('');
+    secundarios.forEach(function (it) {
+      var fs = FAIXAS_A.filter(function (x) { return x.chave === it.riscoSecundarioFaixa; })[0];
+      l.push('- **' + it.id + '**: ' + mdEscapa(txt(it.riscoSecundario)) +
+        (fs ? ' — severidade estimada ' + fs.emoji + ' ' + fs.rotulo : ''));
+    });
+  } else {
+    l.push('_Nenhum registrado._');
+  }
+  l.push('');
+
+  l.push('## Rastreabilidade (auditabilidade / trilha de decisão)');
+  l.push('');
+  l.push('> Se a recomendação não pode ser explicada, auditada ou contestada, ela não está pronta para decisões críticas.');
+  l.push('');
+  estado.itens.forEach(function (it) {
+    l.push('### ' + it.id + ' — ' + mdEscapa(enunciadoDe(it)));
+    l.push('');
+    l.push('| Elo | Conteúdo |');
+    l.push('|---|---|');
+    l.push('| **Entrada** | ' + mdEscapa(eloEntrada(it)) + ' |');
+    l.push('| **Processamento** | ' + mdEscapa(eloProcessamento(it)) + ' |');
+    l.push('| **Saída** | ' + mdEscapa(eloSaida(it)) + ' |');
+    l.push('| **Validação** | ' + mdEscapa(eloValidacao(it)) + ' |');
+    l.push('| **Registro** | ' + mdEscapa(eloRegistro(it)) + ' |');
+    l.push('');
+  });
+
+  l.push('## Limites da ferramenta');
+  l.push('');
+  l.push('- **A ferramenta não decide.** Organiza evidência e calcula de forma consistente. A assinatura é humana.');
+  l.push('- **A ferramenta não sabe do seu projeto.** Toda nota vem de quem preenche; ela não valida se a nota é honesta.');
+  l.push('- **A ferramenta não substitui** o plano de gerenciamento de riscos, nem a análise quantitativa, nem o monitoramento contínuo.');
+  l.push('- **Nenhum dado sai da máquina.** Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.');
+  l.push('');
+  l.push('---');
+  l.push('');
+  l.push('Gerado por `riscos-pppm` ' + APP_VERSAO + ' a partir do kernel `metodo/`. ');
+  l.push('Vocabulário da disciplina Formação de Consultores em IA Aplicada ao PPPM (Prof. Dr. José Bezerra, BSBr). ');
+  l.push('PMI®, PMBOK® e PMP® são marcas do Project Management Institute, Inc.');
+  l.push('');
+  return l.join('\n');
+}
+
+function nomeArquivo(ext) {
+  var base = (txt(estado.enquadramento.contexto) || 'sessao').toLowerCase();
+  if (typeof base.normalize === 'function') {
+    base = base.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  base = base.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'sessao';
+  /* com hora e minuto: dois exports no mesmo dia colidiam no mesmo nome */
+  var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  return 'registro-de-riscos-' + base + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+         '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.' + ext;
+}
+
+/* Montar o download e disparar o download são coisas separadas de propósito:
+   a montagem é verificável (nome, tipo, blob) e o autoteste a exercita sem
+   baixar arquivo nenhum; o disparo não é observável de dentro da página. */
+function prepararDownload(nome, conteudo, mime, comBOM) {
+  var partes = comBOM ? ['\uFEFF', conteudo] : [conteudo];
+  var blob = new Blob(partes, { type: mime + ';charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.style.display = 'none';
+  return a;
+}
+
+/* Devolve se a API de download foi ACIONADA sem erro — nunca se o arquivo baixou.
+   Nenhum navegador sinaliza um download bloqueado: o clique simplesmente não faz
+   nada. Por isso o nome diz "tentar", e por isso o app oferece a cópia manual
+   mesmo quando esta função devolve true. */
+function tentarBaixar(nome, conteudo, mime, comBOM) {
+  var a;
+  try { a = prepararDownload(nome, conteudo, mime, comBOM); }
+  catch (e) { return false; }
+  try {
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) { /* ignorado */ } }, 3000);
+    return true;
+  } catch (e) {
+    try { URL.revokeObjectURL(a.href); } catch (e2) { /* ignorado */ }
+    return false;
+  }
+}
+
+/* Um navegador que bloqueia download não lança exceção — o clique simplesmente
+   não faz nada. Então não existe como saber que o arquivo baixou, e afirmar que
+   baixou seria mentira exatamente no cenário que importa: Safari e file://.
+   O texto diz o que é verdade (o download foi pedido) e deixa a saída manual à mão. */
+function mostrarAreaDeTexto(titulo, classe, conteudo, nome) {
+  var alvo = $('#status-export');
+  if (!alvo) return null;
+  alvo.innerHTML = '<div class="nota' + (classe ? ' ' + classe : '') + '"><p>' + titulo +
+    ' Cole num editor e salve como <code>' + esc(nome) + '</code>.</p>' +
+    '<textarea rows="12" id="export-fallback" aria-label="Conteúdo do registro para copiar"></textarea></div>';
+  var ta = $('#export-fallback');
+  if (ta) ta.value = conteudo;
+  return ta;
+}
+
+function copiarPorSelecao() {
+  var ta = $('#export-fallback');
+  if (!ta) return false;
+  try {
+    ta.focus();
+    ta.select();
+    if (ta.setSelectionRange) ta.setSelectionRange(0, ta.value.length);
+    return document.execCommand('copy') === true;
+  } catch (e) { return false; }
+}
+
+function relatarCopia(copiou, nome) {
+  var alvo = $('#status-export');
+  var p = alvo ? alvo.querySelector('p') : null;
+  if (!p) return;
+  p.innerHTML = copiou
+    ? '<b>Copiado para a área de transferência.</b> Cole num editor e salve como <code>' + esc(nome) + '</code>.'
+    : '<b>Não foi possível copiar automaticamente.</b> O texto abaixo está selecionado: use ' +
+      '<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd> e salve como <code>' + esc(nome) + '</code>.';
+}
+
+function copiarConteudo(conteudo, nome) {
+  mostrarAreaDeTexto('<b>Preparando cópia…</b>', '', conteudo, nome);
+  /* navigator.clipboard exige contexto seguro e não existe em file://, que é
+     justamente o caminho de uso principal. Por isso a seleção não é remendo. */
+  var api = window.navigator && window.navigator.clipboard;
+  if (api && api.writeText) {
+    try {
+      api.writeText(conteudo).then(
+        function () { relatarCopia(true, nome); },
+        function () { relatarCopia(copiarPorSelecao(), nome); }
+      );
+      return;
+    } catch (e) { /* cai para a seleção */ }
+  }
+  relatarCopia(copiarPorSelecao(), nome);
+}
+
+/* =====================================================================
+   9. RENDER E EVENTOS
+   ===================================================================== */
+function render() {
+  renderPassos();
+  var painel = $('#painel');
+  if (!enquadramentoCompleto() && estado.etapa > 1) estado.etapa = 1;
+  if (estado.etapa === 1) painel.innerHTML = renderEtapa1();
+  else if (estado.etapa === 2) painel.innerHTML = renderEtapa2();
+  else if (estado.etapa === 3) painel.innerHTML = renderEtapa3();
+  else if (estado.etapa === 4) painel.innerHTML = renderEtapa4();
+  else painel.innerHTML = renderEtapa5();
+  atualizarDerivados();
+  salvar();   /* salvar() ignora sessão virgem: abrir a página não cria registro */
+}
+
+function atualizarDerivados() {
+  if (estado.etapa === 1) { renderEnqStatus(); return; }
+  if (estado.etapa === 2) {
+    renderNovoStatus();
+    estado.itens.forEach(renderCartaoI2);
+    return;
+  }
+  if (estado.etapa === 3) { itensPriorizaveis().forEach(renderDerivadoA); return; }
+  if (estado.etapa === 4) {
+    if (estado.abaResponder === 'reguab') {
+      estado.itens.forEach(function (it) { renderDerivadoB(it); });
+      renderRankingB();
+    } else {
+      itensPriorizaveis().forEach(function (it) { renderCondR(it); renderDerivadoR(it); });
+    }
+    return;
+  }
+  renderFechamento(); renderPrevia(); renderStatusExport();
+}
+
+function renderNovoStatus() {
+  var alvo = $('#novo-status');
+  if (!alvo) return;
+  var faltando = faltasDoEnunciado(estado.novo);
+  if (faltando.length === 3) {
+    alvo.innerHTML = '<div class="nota"><p><small>Preencha os três campos. Registrar com campo faltando é permitido — o item entra como rascunho.</small></p></div>';
+  } else if (faltando.length) {
+    alvo.innerHTML = '<div class="nota nota-aviso"><p><b>Enunciado incompleto:</b> falta ' + esc(faltando.join(' e ')) +
+      '. O item será registrado como <b>rascunho</b> e não será priorizável até ser completado.</p></div>';
+  } else {
+    alvo.innerHTML = '<div class="nota nota-acc"><p>' + esc(enunciadoDe(estado.novo)) + '</p></div>';
+  }
+}
+
+function marcarArmazenamento() {
+  var el = document.getElementById('aviso-armazenamento');
+  if (!el) return;
+  if (armazenamentoOk) { el.hidden = true; el.textContent = ''; el.title = ''; return; }
+  el.hidden = false;
+  if (armazenamentoMotivo === 'cheio') {
+    el.textContent = 'Armazenamento cheio — sessão só em memória';
+    el.title = 'O navegador recusou gravar por falta de espaço. Cada item guarda cinco cadeias de rastreabilidade, ' +
+      'e elas ocupam. Exporte o registro e use “Limpar sessão”: a gravação volta sozinha assim que houver espaço.';
+  } else {
+    el.textContent = 'Sessão só em memória — armazenamento indisponível';
+    el.title = 'localStorage bloqueado (janela anônima ou política do navegador). O app funciona normalmente, ' +
+      'mas a sessão se perde ao recarregar. Exporte antes de fechar a aba.';
+  }
+}
+
+function irPara(n) {
+  if (n > 1 && !enquadramentoCompleto()) { estado.etapa = 1; render(); return; }
+  estado.etapa = n;
+  render();
+  try { window.scrollTo(0, 0); } catch (e) { /* ignorado */ }
+}
+
+function proximoId() {
+  estado.seq += 1;
+  var n = String(estado.seq);
+  while (n.length < 3) n = '0' + n;
+  return 'R' + n;
+}
+
+function adicionarItem() {
+  if (!txt(estado.novo.causa) && !txt(estado.novo.evento) && !txt(estado.novo.efeito)) {
+    var alvo = $('#novo-status');
+    if (alvo) alvo.innerHTML = '<div class="nota nota-erro"><p>Nada a registrar: preencha ao menos um dos três campos do enunciado.</p></div>';
+    return;
+  }
+  var it = novoItemCru();
+  it.id = proximoId();
+  it.polaridade = estado.abaIdentificar;
+  it.tecnica = estado.novo.tecnica || estado.tecnicaAtiva[estado.abaIdentificar] || '';
+  it.causa = estado.novo.causa;
+  it.evento = estado.novo.evento;
+  it.efeito = estado.novo.efeito;
+  estado.itens.push(it);
+  estado.novo = { tecnica: it.tecnica, causa: '', evento: '', efeito: '' };
+  render();
+}
+
+function promoverRiscoSecundario(id) {
+  var origem = itemPorId(id);
+  if (!origem || !txt(origem.riscoSecundario)) return;
+
+  /* Idempotente: clicar de novo leva ao item já gerado em vez de criar um gêmeo. */
+  if (txt(origem.promovidoPara) && itemPorId(origem.promovidoPara)) {
+    estado.etapa = 2;
+    render();
+    return;
+  }
+
+  var novo = criarItemDeRiscoSecundario(origem, proximoId());
+  origem.promovidoPara = novo.id;
+  estado.itens.push(novo);
+  estado.etapa = 2;
+  render();
+}
+
+/* Puro: monta o item novo a partir da origem, sem tocar em estado nem em DOM. */
+function criarItemDeRiscoSecundario(origem, novoId) {
+  var acao = txt(origem.acao);
+  var novo = novoItemCru();
+  novo.id = novoId;
+  novo.polaridade = origem.polaridade;
+  novo.tecnica = origem.tecnica;
+  /* Sem ação descrita, a causa não pode virar uma frase com um buraco no meio. */
+  novo.causa = acao
+    ? 'ter escolhido a resposta “' + acao + '” para ' + origem.id
+    : 'a resposta planejada para ' + origem.id +
+      (origem.estrategia ? ' (estratégia ' + origem.estrategia + ', ação ainda não descrita)' : ' (ação ainda não descrita)');
+  novo.evento = txt(origem.riscoSecundario);
+  novo.efeito = '';
+  /* Rastreabilidade nos dois sentidos: sem isso o mesmo risco aparece duas vezes
+     no registro, em duas formas, sem nada dizendo que são o mesmo. */
+  novo.origemRiscoSecundario = origem.id;
+  return novo;
+}
+
+/* --- delegação de eventos --- */
+function ligarEventos() {
+  var painel = $('#painel');
+
+  painel.addEventListener('input', function (ev) {
+    var t = ev.target;
+    if (t.hasAttribute && t.hasAttribute('data-enq')) {
+      estado.enquadramento[t.getAttribute('data-enq')] = t.value;
+      renderEnqStatus(); renderPassos(); salvar(); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-sessao')) {
+      estado[t.getAttribute('data-sessao')] = t.value;
+      salvar(); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-novo')) {
+      estado.novo[t.getAttribute('data-novo')] = t.value;
+      renderNovoStatus(); salvar(); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-item') && t.hasAttribute('data-campo')) {
+      aplicarCampo(t); return;
+    }
+  });
+
+  painel.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.id === 'filtro-esforco') { estado.soEsforcoBaixo = t.checked; render(); return; }
+    if (t.hasAttribute && t.hasAttribute('data-confirmar')) {
+      var it = itemPorId(t.getAttribute('data-item'));
+      if (!it) return;
+      var g = t.getAttribute('data-confirmar');
+      if (t.checked) it.confirmacoes[g] = new Date().toISOString();
+      else delete it.confirmacoes[g];
+      var carimbo = $('[data-carimbo="' + it.id + '|' + g + '"]');
+      if (carimbo) carimbo.textContent = t.checked ? '· confirmado em ' + dataBR(it.confirmacoes[g]) : '';
+      renderStatusR(it); salvar(); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-item') && t.hasAttribute('data-campo')) {
+      aplicarCampo(t, true); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-novo')) {
+      estado.novo[t.getAttribute('data-novo')] = t.value;
+      renderNovoStatus(); salvar(); return;
+    }
+  });
+
+  painel.addEventListener('click', function (ev) {
+    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md') : null;
+    if (!t) return;
+
+    if (t.hasAttribute('data-ir')) { ev.preventDefault(); irPara(parseInt(t.getAttribute('data-ir'), 10)); return; }
+    if (t.hasAttribute('data-aba-id')) { estado.abaIdentificar = t.getAttribute('data-aba-id'); render(); return; }
+    if (t.hasAttribute('data-aba4')) { estado.abaResponder = t.getAttribute('data-aba4'); render(); return; }
+    if (t.hasAttribute('data-usar-tecnica')) {
+      estado.tecnicaAtiva[estado.abaIdentificar] = t.getAttribute('data-usar-tecnica');
+      estado.novo.tecnica = t.getAttribute('data-usar-tecnica');
+      render(); return;
+    }
+    if (t.hasAttribute('data-remover')) {
+      var idr = t.getAttribute('data-remover');
+      if (window.confirm('Remover o item ' + idr + ' do registro?')) {
+        estado.itens = estado.itens.filter(function (x) { return x.id !== idr; });
+        render();
+      }
+      return;
+    }
+    if (t.hasAttribute('data-promover')) { promoverRiscoSecundario(t.getAttribute('data-promover')); return; }
+    if (t.hasAttribute('data-encerrar')) {
+      var ite = itemPorId(t.getAttribute('data-encerrar'));
+      if (!ite) return;
+      if (ite.encerrado) { ite.encerrado = false; ite.validadoEm = ''; }
+      else {
+        if (!podeEncerrar(ite)) { renderFechamento(); return; }
+        ite.encerrado = true; ite.validadoEm = new Date().toISOString();
+      }
+      renderFechamento(); renderPrevia(); renderStatusExport(); salvar(); return;
+    }
+    if (t.hasAttribute('data-rolar-limites')) {
+      ev.preventDefault();
+      var lim = document.querySelector('.limites');
+      if (lim && lim.scrollIntoView) lim.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    if (t.id === 'btn-adicionar') { adicionarItem(); return; }
+    if (t.id === 'btn-csv' || t.id === 'btn-md') {
+      if (!exportacaoDisponivel()) return;
+      var ehCsvD = t.id === 'btn-csv';
+      var conteudoD = ehCsvD ? gerarCSV() : gerarMarkdown();
+      var nomeD = nomeArquivo(ehCsvD ? 'csv' : 'md');
+      var acionou = tentarBaixar(nomeD, conteudoD, ehCsvD ? 'text/csv' : 'text/markdown', ehCsvD);
+      var alvoD = $('#status-export');
+      if (!acionou) {
+        mostrarAreaDeTexto('<b>Este navegador não gerou o arquivo.</b>', 'nota-aviso', conteudoD, nomeD);
+      } else if (alvoD) {
+        alvoD.innerHTML = '<div class="nota"><p><b>Download de <code>' + esc(nomeD) + '</code> solicitado.</b> ' +
+          'Se nada baixou — acontece em alguns navegadores com o arquivo aberto por <code>file://</code> — use o botão ' +
+          '“Copiar ' + (ehCsvD ? 'CSV' : 'Markdown') + '” e cole num editor.</p></div>';
+      }
+      return;
+    }
+    if (t.id === 'btn-copiar-csv' || t.id === 'btn-copiar-md') {
+      if (!exportacaoDisponivel()) return;
+      var ehCsv = t.id === 'btn-copiar-csv';
+      copiarConteudo(ehCsv ? gerarCSV() : gerarMarkdown(), nomeArquivo(ehCsv ? 'csv' : 'md'));
+      return;
+    }
+  });
+
+  $('#btn-limpar').addEventListener('click', function () {
+    if (window.confirm('Limpar a sessão inteira? Enquadramento, itens e respostas serão apagados. Exporte antes se precisar.')) {
+      limparSessao();
+    }
+  });
+
+  $('#passos').addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('[data-etapa]') : null;
+    if (!b || b.disabled) return;
+    irPara(parseInt(b.getAttribute('data-etapa'), 10));
+  });
+}
+
+function aplicarCampo(t, estrutural) {
+  var it = itemPorId(t.getAttribute('data-item'));
+  if (!it) return;
+  var campo = t.getAttribute('data-campo');
+  var valor;
+  if (t.type === 'checkbox') valor = t.checked;
+  else if (t.hasAttribute('data-num')) valor = t.value === '' ? null : parseInt(t.value, 10);
+  else valor = t.value;
+  it[campo] = valor;
+
+  /* Digitar no risco secundário desmarca "avaliei e não há"; marcar a caixa
+     limpa o texto — inclusive no DOM, que a normalização sozinha não alcança. */
+  var mexeuNoTexto = (campo === 'riscoSecundario' || campo === 'riscoSecundarioFaixa');
+  normalizarItem(it, mexeuNoTexto);
+  if (campo === 'riscoSecundarioAvaliado' && it.riscoSecundarioAvaliado) {
+    var ta = document.getElementById('rs-' + it.id); if (ta) ta.value = '';
+    var sel = document.getElementById('rsf-' + it.id); if (sel) sel.value = '';
+  }
+  if (mexeuNoTexto) {
+    var cb = document.querySelector('[data-item="' + it.id + '"][data-campo="riscoSecundarioAvaliado"]');
+    if (cb) cb.checked = it.riscoSecundarioAvaliado === true;
+  }
+
+  if (estado.etapa === 3) { renderDerivadoA(it); }
+  else if (estado.etapa === 4 && estado.abaResponder === 'reguab') { renderDerivadoB(it); renderRankingB(); }
+  else if (estado.etapa === 4) {
+    if (campo === 'estrategia') renderCondR(it);
+    renderDerivadoR(it);
+  }
+  else if (estado.etapa === 5) { renderFechamento(); renderPrevia(); renderStatusExport(); }
+  else if (estado.etapa === 2) { renderCartaoI2(it); }
+  salvar();
+}
+
+/* =====================================================================
+   10. ARRANQUE
+   ===================================================================== */
+function mostrarResultadoAutoteste(r) {
+  var selo = document.getElementById('selo-teste');
+  var faixa = document.getElementById('alerta-teste');
+  /* O selo diz o que o autoteste prova, e nada além. Ele roda dentro da página,
+     e a página não lê arquivo nenhum: prova CONSISTÊNCIA INTERNA — os casos de
+     verificação da Aula 2, as fronteiras das duas réguas, o parser, o gate de
+     HITL e o formato do registro exportado. Paridade com metodo/ é outra coisa,
+     e quem atesta é scripts/verificar-kernel.py. */
+  if (r.ok) {
+    if (selo) {
+      selo.className = 'pilula selo-ok';
+      selo.textContent = 'autoteste ✓ · ' + r.total + ' checagens';
+      selo.title = 'Autoteste embutido, rodado a cada carga da página. Cobre: os três casos de verificação ' +
+        'da Aula 2 (89/82/79), os extremos 20/100, as fronteiras das faixas das duas réguas, o parser do ' +
+        'catálogo, o corte obrigatório de dono, os seis gatilhos de HITL, o formato do registro exportado ' +
+        'e cada linha da matriz de casos-limite. Não deixa efeito colateral na sessão.\n\n' +
+        'O que ele NÃO cobre: paridade com os arquivos de metodo/, porque a página não lê arquivo nenhum. ' +
+        'Isso é verificado por scripts/verificar-kernel.py, que roda no repositório.';
+    }
+    if (faixa) { faixa.hidden = true; faixa.innerHTML = ''; }
+  } else {
+    if (selo) {
+      selo.className = 'pilula selo-falha';
+      selo.textContent = 'autoteste ✗ · ' + r.falhas.length + ' de ' + r.total + ' falharam';
+    }
+    if (faixa) {
+      faixa.hidden = false;
+      faixa.innerHTML = '<div class="envelope">O autoteste falhou — não confie nos números desta sessão.' +
+        '<ul>' + r.falhas.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>';
+    }
+  }
+}
+
+function iniciar() {
+  var va = document.getElementById('v-app');
+  if (va) va.textContent = APP_VERSAO;
+
+  var resultado;
+  try { resultado = rodarAutoteste(); }
+  catch (e) { resultado = { total: 0, falhas: ['Exceção durante o autoteste: ' + msgDoErro(e)], ok: false }; }
+
+  /* Cada passo do boot é isolado: se restaurar a sessão falhar, ainda queremos
+     interface ligada e desenhada. E a falha vai para a MESMA faixa vermelha —
+     miolo vazio com “método verificado ✓” no rodapé seria a pior combinação
+     possível, porque o usuário confiaria numa página que não funcionou. */
+  var falhasBoot = [];
+  function passo(nome, fn) {
+    try { fn(); } catch (e) { falhasBoot.push('Falha ao iniciar (' + nome + '): ' + msgDoErro(e)); }
+  }
+  passo('restaurar a sessão salva', carregar);
+  passo('avaliar o armazenamento', marcarArmazenamento);
+  passo('ligar os eventos da interface', ligarEventos);
+  passo('vigiar outras abas', vigiarOutrasAbas);
+  passo('desenhar a etapa', render);
+
+  if (falhasBoot.length) {
+    resultado = {
+      total: resultado.total,
+      falhas: (resultado.falhas || []).concat(falhasBoot),
+      ok: false
+    };
+    var painel = document.getElementById('painel');
+    if (painel && !painel.innerHTML.replace(/\s/g, '')) {
+      painel.innerHTML = '<div class="bloco"><div class="nota nota-erro">' +
+        '<p><b>A sessão não pôde ser iniciada.</b> Recarregue a página. Se o erro persistir, ' +
+        'a causa provável é uma sessão salva corrompida — use o botão abaixo para descartá-la.</p>' +
+        '<div class="acoes"><button type="button" class="btn btn-perigo" id="btn-descartar-sessao">' +
+        'Descartar a sessão salva e recarregar</button></div></div></div>';
+      var bd = document.getElementById('btn-descartar-sessao');
+      if (bd) {
+        bd.addEventListener('click', function () {
+          try { window.localStorage.removeItem(CHAVE_ARMAZENAMENTO); } catch (e) { /* ignorado */ }
+          try { window.location.reload(); } catch (e) { /* ignorado */ }
+        });
+      }
+    }
+  }
+  mostrarResultadoAutoteste(resultado);
+}
+
+function msgDoErro(e) { return (e && e.message) ? e.message : String(e); }
+
+/* (18) Duas abas dividem a mesma chave e a última gravação vence. Não dá para
+   impedir sem sincronização; dá para avisar antes que o usuário perca o registro. */
+function vigiarOutrasAbas() {
+  if (!window.addEventListener) return;
+  window.addEventListener('storage', function (ev) {
+    if (!ev || ev.key !== CHAVE_ARMAZENAMENTO) return;
+    var meu;
+    try { meu = serializarSessao(estado); } catch (e) { meu = null; }
+    if (ev.newValue === meu) return;
+    var faixa = document.getElementById('alerta-abas');
+    if (!faixa) return;
+    faixa.hidden = false;
+    faixa.innerHTML = '<div class="envelope"><b>Outra aba gravou uma sessão diferente.</b> ' +
+      'As duas abas dividem o mesmo registro salvo, e a última gravação vence — o que você fizer aqui pode ' +
+      'sobrescrever o que foi feito lá, e vice-versa. Trabalhe numa aba só e <b>exporte antes de fechar</b>.</div>';
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', iniciar);
+} else {
+  iniciar();
+}
+
+})();
+</script>
+</body>
+</html>
