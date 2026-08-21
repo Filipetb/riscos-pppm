@@ -6,7 +6,7 @@ Uma sessão guiada que leva você de "não sei quais são meus riscos" a um regi
 
 **➤ [Abrir a sessão de riscos](https://filipetb.github.io/riscos-pppm/)** — roda no navegador, offline, sem instalar nada.
 
-> O método (`metodo/`) e a interface web (`docs/index.html`) estão prontos. A skill do Claude Code (`/riscos`) cobre hoje as Etapas 1–2 (Enquadrar e Identificar); as demais estão em construção.
+> O método (`metodo/`) e a interface web (`docs/index.html`) estão prontos. A skill do Claude Code (`/riscos`) cobre hoje as Etapas 1–3 (Enquadrar, Identificar e Priorizar); Responder e Registrar estão em construção.
 
 ---
 
@@ -22,7 +22,7 @@ Este projeto empacota as técnicas de identificação do PMBOK em perguntas conc
 
 A sessão guiada vai de Enquadrar a Registrar em cinco etapas, bloqueia o encerramento de item sem dono, e exporta o registro em CSV e em Markdown. A sessão fica no `localStorage` do seu navegador — recarregar a página não perde o trabalho.
 
-**No Claude Code** — clonar o repositório, abrir o Claude Code na pasta e rodar `/riscos`. Mesmo método, com elicitação conversacional em vez de formulário: a IA faz a pergunta de disparo da técnica, estrutura o que você responde no formato causa → evento → efeito e, se você quiser, propõe candidatos ancorados no seu contexto para você aceitar, ajustar ou descartar. Cada item sai marcado com a origem (`humano`, `ia-aceito`, `ia-ajustado`). A sessão fica em `sessoes/<slug>/` (gitignorado). *Hoje cobre as Etapas 1–2; Priorizar, Responder e Registrar vêm a seguir.*
+**No Claude Code** — clonar o repositório, abrir o Claude Code na pasta e rodar `/riscos`. Mesmo método, com elicitação conversacional em vez de formulário: a IA faz a pergunta de disparo da técnica, estrutura o que você responde no formato causa → evento → efeito e, se você quiser, propõe candidatos ancorados no seu contexto para você aceitar, ajustar ou descartar. Cada item sai marcado com a origem (`humano`, `ia-aceito`, `ia-ajustado`). Na priorização a IA sugere a nota citando o critério do kernel e o trecho da conversa que a sustenta ("P = 4 — aconteceu no projeto anterior"), você fixa, e ela pergunta *de onde vem esse número* — a resposta vira a qualidade do dado. A sessão fica em `sessoes/<slug>/` (gitignorado). *Hoje cobre as Etapas 1–3; Responder e Registrar vêm a seguir.*
 
 Ambos produzem o mesmo registro, com os mesmos campos e as mesmas fórmulas, porque leem o mesmo kernel.
 
@@ -85,8 +85,8 @@ Item sem uma pessoa nomeada não pode ser encerrado. Aparece numa seção `Pende
 ## Roadmap
 
 - [x] Interface web (`docs/index.html`) — sessão guiada em cinco etapas, corte obrigatório de HITL e exportação em CSV/Markdown
-- [x] Skill Claude Code — Etapas 1–2 (Enquadrar, Identificar)
-- [ ] Skill Claude Code — Etapas 3–5 (Priorizar, Responder, Registrar) e exportação CSV/MD em paridade com o app
+- [x] Skill Claude Code — Etapas 1–3 (Enquadrar, Identificar, Priorizar)
+- [ ] Skill Claude Code — Etapas 4–5 (Responder, Registrar) e exportação CSV/MD em paridade com o app
 - [ ] Análise quantitativa — VME, reserva de contingência
 - [ ] Monitoramento — reavaliação periódica, análise de reservas
 - [ ] Planejar o Gerenciamento de Riscos — EAR customizável, apetite a risco

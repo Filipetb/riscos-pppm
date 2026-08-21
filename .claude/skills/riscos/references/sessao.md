@@ -15,9 +15,9 @@ Campos e valores espelham `sessaoNova()` e `novoItemCru()` do app. Campos que a 
 
 ```json
 {
-  "versaoApp": "skill-riscos 0.1.0",
+  "versaoApp": "skill-riscos 0.2.0",
   "criadoEm": "2026-08-21T18:00:00.000Z",
-  "etapa": 2,
+  "etapa": 3,
   "enquadramento": { "contexto": "", "dor": "", "dados": "", "riscos": "", "valor": "" },
   "conduzidaPor": "",
   "postura": "parceira",
@@ -30,8 +30,10 @@ Campos e valores espelham `sessaoNova()` e `novoItemCru()` do app. Campos que a 
       "tecnica": "T01",
       "causa": "", "evento": "", "efeito": "",
       "origem": "humano",
-      "probabilidade": null, "impPrazo": null, "impCusto": null, "impEscopo": null,
-      "qualidade": "",
+      "probabilidade": 4, "impPrazo": 5, "impCusto": null, "impEscopo": 2,
+      "qualidade": "alta",
+      "origemNota": "ia-ajustado",
+      "baseAvaliacao": "relatório mensal do call center: pico em todo janeiro desde 2022",
       "estrategia": "", "acao": "", "dono": "", "gatilho": "", "residual": "",
       "justificativa": "", "destinatario": "", "replanejamento": "",
       "riscoSecundario": "", "riscoSecundarioFaixa": "", "riscoSecundarioAvaliado": false,
@@ -50,20 +52,23 @@ Regras:
 - `origem` ∈ `humano` · `ia-aceito` · `ia-ajustado`. É campo da skill (o app não o tem); fica no item para que o `elo_validacao` do registro final possa dizer se o humano aceitou ou ajustou a sugestão.
 - `polaridade` ∈ `ameaca` · `oportunidade`. `tecnica` é o `id` do CSV (`T01`…), não o nome.
 - `postura` ∈ `parceira` · `perguntas`.
-- `etapa` é a última etapa concluída ou em curso (1 ou 2 nesta versão).
+- `etapa` é a última etapa concluída ou em curso (1, 2 ou 3 nesta versão).
+- **Campos da Etapa 3** (preenchidos só quando a pessoa fixa): `probabilidade` e `impPrazo`/`impCusto`/`impEscopo` são inteiros 1–5 ou `null` (dimensão que não se aplica, ou item não priorizado); `qualidade` ∈ `""` · `alta` · `media` · `baixa`; `dadoSensivel` booleano. **Severidade e faixa não são gravadas** — são derivadas (P × maior I) na hora de ler, como no app.
+- `origemNota` ∈ `humano` · `ia-aceito` · `ia-ajustado` · `""` (ainda sem nota). Campo da skill, irmão de `origem`: diz se a nota foi dada sem sugestão, aceita como sugerida ou ajustada.
+- `baseAvaliacao` é texto livre: a resposta a "De onde vem esse número?", ou o motivo de o item não ter sido priorizado. Campo da skill; é o que sustenta `qualidade` e o elo *Entrada* da rastreabilidade. Sessões gravadas pela versão 0.1.0 não têm `origemNota`/`baseAvaliacao`; ao retomar, trate como `""`.
 - Escreva o JSON inteiro a cada item aceito. Arquivo pequeno, escrita barata, e não há fila para perder.
 
 ## `registro.md`
 
-Gerado ao fechar a Etapa 2 (e regerado se a pessoa voltar e acrescentar). Estrutura, espelhando o Markdown que o app exporta:
+Gerado ao fechar cada etapa (e regerado se a pessoa voltar e mudar algo). Estrutura, espelhando o Markdown que o app exporta — a seção de priorização só aparece a partir da Etapa 3:
 
 ```markdown
 # Registro de riscos — <contexto>
 
 **Sessão iniciada em:** <dd/mm/aaaa hh:mm>
 **Conduzida por:** <nome>
-**Versão das regras:** skill-riscos 0.1.0 · kernel em metodo/
-**Etapas concluídas:** 1 Enquadrar · 2 Identificar. Pendentes: 3 Priorizar · 4 Responder · 5 Registrar.
+**Versão das regras:** skill-riscos 0.2.0 · kernel em metodo/
+**Etapas concluídas:** 1 Enquadrar · 2 Identificar · 3 Priorizar. Pendentes: 4 Responder · 5 Registrar.
 
 ## Enquadramento — mapa inicial de oportunidades (registro de partes interessadas + declaração de escopo)
 
@@ -83,16 +88,36 @@ Técnicas aplicadas: T01 Pré-mortem (Premortem / retrospectiva prospectiva) · 
 |---|---|---|---|---|
 | R001 | Ameaça | Devido a …, pode ocorrer …, o que levaria a … | T01 Pré-mortem | humano |
 
-> Origem: `humano` = enunciado do participante · `ia-aceito` = proposto pela IA e aceito sem alteração · `ia-ajustado` = proposto pela IA e alterado pelo participante. Nenhum item está priorizado, respondido ou validado — isso é das Etapas 3–5.
+> Origem: `humano` = enunciado do participante · `ia-aceito` = proposto pela IA e aceito sem alteração · `ia-ajustado` = proposto pela IA e alterado pelo participante.
+
+## Priorização — Régua A (Realizar a Análise Qualitativa dos Riscos)
+
+Severidade = Probabilidade × Impacto (1–25); Impacto = maior nota entre prazo, custo e escopo/qualidade. Faixas: 🔴 Alto 15–25 · 🟡 Médio 5–12 · 🟢 Baixo 1–4.
+
+| ID | Polaridade | Enunciado | P | I (prazo/custo/escopo) | Severidade | Faixa | Qualidade do dado | Base da avaliação | Dado sensível | Origem da nota |
+|---|---|---|---|---|---|---|---|---|---|---|
+| R001 | Ameaça | Devido a …, pode ocorrer …, o que levaria a … | 4 | 5 (5/—/2) | 20 | 🔴 Alto | 🟢 Alta | relatório mensal do call center… | sim | ia-ajustado |
+| R007 | Ameaça | … | — | — | — | não priorizado | — | não avaliado: falta dado de carga | não | — |
+
+🔴 Alto: n · 🟡 Médio: n · 🟢 Baixo: n · não priorizados: n
+
+**Investigue** (severidade alta com qualidade de dado baixa — não vira ação imediata, vira investigação): R00x, R00y. *(nenhum, se não houver)*
+
+**Gatilhos de validação humana obrigatória já acionados** (confirmação explícita na Etapa 4): gatilho 1 (severidade alta): R…; gatilho 3 (dado sensível): R…; gatilho 4 (alta + dado baixo): R….
+
+> Origem da nota: `humano` = nota dada sem sugestão da IA · `ia-aceito` = sugestão da IA fixada sem alteração · `ia-ajustado` = sugestão da IA alterada pelo participante. Item com origem `ia-aceito` e origem da nota `ia-aceito` é item em que o humano só confirmou — está dito aqui para que o elo de validação não finja mais do que houve. Em sessão conversacional individual, os passos 2–4 do fluxo de validação da Aula 2 colapsam num único ponto: quem conduz. Nenhum item está respondido ou validado — isso é das Etapas 4–5.
 ```
+
+Ordene a tabela de priorização por severidade decrescente; não priorizados por último. Severidade e faixa são calculadas na geração, nunca copiadas de campo gravado.
 
 Enunciado na tabela = `Devido a <causa>, pode ocorrer <evento>, o que levaria a <efeito>`. Escape `|` dentro de célula como `\|`.
 
 ## Retomar
 
-Se na ativação houver `sessoes/*/sessao.json` com `etapa` ≤ 2, ofereça retomar. Ao retomar:
+Se na ativação houver `sessoes/*/sessao.json` com `etapa` ≤ 3, ofereça retomar. Ao retomar:
 
 1. Leia o `sessao.json` inteiro. Não leia o `registro.md` — ele é derivado.
 2. Recarregue a `postura` e mantenha-a.
 3. Reflita em poucas linhas onde parou: contexto, quantos itens, quais técnicas já rodaram (`tecnicasRodadas`), qual estava ativa.
-4. Continue da técnica ativa se ela não secou, ou ofereça a próxima da combinação. Se `etapa` = 2 e a pessoa já tinha fechado, pergunte se quer acrescentar itens ou só regenerar o `registro.md`.
+4. Se `etapa` ≤ 2: continue da técnica ativa se ela não secou, ou ofereça a próxima da combinação. Se a Etapa 2 estava fechada, pergunte se quer acrescentar itens ou seguir para a Etapa 3.
+5. Se `etapa` = 3: diga quantos itens já têm nota e quantos faltam (`probabilidade === null` e `baseAvaliacao` vazio = ainda não passou); continue do primeiro que falta. Se todos passaram, pergunte se quer rever alguma nota ou só regenerar o `registro.md`. Itens acrescentados na Etapa 2 depois de a 3 ter começado entram na fila da priorização.

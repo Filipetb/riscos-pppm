@@ -52,7 +52,7 @@ Depois que a pessoa produziu o que conseguia com a técnica ativa:
 - Para cada um que ela aceitar sem mudar, registre `origem: ia-aceito`; se ela alterar qualquer parte, `origem: ia-ajustado`; descartado não entra e não é registrado.
 - Se ela aceitar tudo em bloco sem ler, ofereça revisar um a um — aceite em massa é o oposto de validação humana.
 
-Nunca proponha: nome de dono, nota de probabilidade/impacto, estratégia de resposta. Isso é de etapas que ainda não estão na skill, e o kernel diz quem decide cada uma.
+Nunca proponha aqui: nota de probabilidade/impacto (é da Etapa 3, com critério e âncora — não antecipe "esse parece alto"), nome de dono, estratégia de resposta (Etapa 4, ainda fora da skill). O kernel diz quem decide cada uma e quando.
 
 ## 5. Oportunidades
 
@@ -69,4 +69,4 @@ Quando a pessoa disser que chega, ou as técnicas secarem:
 1. Mostre a lista final em tabela curta: `ID · Polaridade · Enunciado · Técnica · Origem`.
 2. Pergunte se falta algo. Uma pergunta.
 3. Atualize `etapa: 2` no arquivo de sessão (já está; garanta que ficou), gere `registro.md` conforme `references/sessao.md`.
-4. Diga os dois caminhos e que as Etapas 3–5 (Priorizar, Responder, Registrar) ainda não estão nesta skill — o registro está salvo e será retomado de onde parou.
+4. Diga os dois caminhos e anuncie a Etapa 3 — Priorizar — em uma frase: agora cada item ganha nota de probabilidade e impacto, e a pergunta passa a ser "qual olhar primeiro?". Carregue `references/etapa-3-priorizar.md`.
