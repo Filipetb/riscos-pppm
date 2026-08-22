@@ -280,7 +280,7 @@ T12,Caça à Oportunidade,Identificação de riscos positivos,oportunidade,"Onde
 (function () {
 'use strict';
 
-var APP_VERSAO = '1.2.0';
+var APP_VERSAO = '1.2.1';
 /* metodo/ não declara versão própria. O elo de Processamento da rastreabilidade
    pede "versão do método"; quem cumpre esse papel é a versão do app, que é o que
    fixa as regras aplicadas. O registro diz isso em vez de inventar um marcador
@@ -1422,6 +1422,15 @@ function rodarAutoteste() {
       checa('Notas · prompt proíbe P 4/5 sem fato, qualidade do dado, severidade, estratégia e dono',
             /NUNCA proponha P = 4[\s\S]*NÃO sugira qualidade do dado[\s\S]*NÃO calcule severidade[\s\S]*dono/.test(pn), true);
       checa('Notas · prompt não leva as faixas de severidade (o modelo não classifica)', /15\s*[–-]\s*25/.test(pn), false);
+      checa('Notas · prompt diz que o enunciado é âncora e prefere "supondo que" a "?" no impacto',
+            /PRÓPRIO ENUNCIADO[\s\S]*prefira nota \+ "supondo que/.test(pn), true);
+      checa('Notas · sem contexto adicional, a seção não aparece', /Contexto adicional dado pela pessoa/.test(pn), false);
+      estado.contextoAssistido = 'o portal de 2014 atrasou 3 semanas';
+      checa('Notas · contexto adicional entra no prompt como âncora', /Contexto adicional dado pela pessoa[\s\S]*portal de 2014 atrasou 3 semanas/.test(promptNotas()), true);
+      checa('Assistido · contexto adicional entra também no prompt da Etapa 2', /portal de 2014 atrasou 3 semanas/.test(promptAssistido('ameaca', tecnicaPorId('T01'))), true);
+      checa('Notas · contexto adicional sobrevive ao recarregar; não-texto cai',
+            [desserializarSessao(serializarSessao({ contextoAssistido: 'x' })).contextoAssistido, desserializarSessao(serializarSessao({ contextoAssistido: 5 })).contextoAssistido].join('|'), 'x|');
+      estado.contextoAssistido = '';
 
       var resp = 'Segue:\n```\n' + MARCADOR_NOTAS + '\n' +
         '### R001\nP: 4 — "Aconteceu no projeto anterior" — vem de: "portal de 2014 estourou a janela" (Dados)\n' +
@@ -1755,6 +1764,7 @@ function sessaoNova() {
     novo: { tecnica: '', causa: '', evento: '', efeito: '' },
     sugestoes: [],   /* modo assistido: candidatos colados, ainda sem ID — não são itens */
     sugestoesNota: {},   /* modo assistido (Etapa 3): notas sugeridas por ID, ainda não fixadas */
+    contextoAssistido: '',   /* fatos além do enquadramento que a pessoa quer dar ao modelo (a "conversa" que o app não tem) */
     abaResponder: 'respostas',
     itens: [], seq: 0
   };
@@ -1843,6 +1853,7 @@ function desserializarSessao(bruto) {
   if (!base.tecnicaAtiva || typeof base.tecnicaAtiva !== 'object') base.tecnicaAtiva = { ameaca: '', oportunidade: '' };
   if (!base.novo || typeof base.novo !== 'object') base.novo = { tecnica: '', causa: '', evento: '', efeito: '' };
   base.sugestoes = Array.isArray(base.sugestoes) ? base.sugestoes.map(sanearSugestao).filter(Boolean) : [];
+  base.contextoAssistido = textoOuVazio(base.contextoAssistido);
   var sn = {};
   if (base.sugestoesNota && typeof base.sugestoesNota === 'object' && !Array.isArray(base.sugestoesNota)) {
     Object.keys(base.sugestoesNota).forEach(function (id) {
@@ -2223,6 +2234,11 @@ function promptAssistido(pol, tec) {
     l.push('- ' + c.titulo + ' — ' + c.pergunta + ' ' + (txt(estado.enquadramento[c.chave]) || '(não informado)'));
   });
   l.push('');
+  if (txt(estado.contextoAssistido)) {
+    l.push('## Contexto adicional dado pela pessoa (vale como âncora)');
+    l.push(txt(estado.contextoAssistido));
+    l.push('');
+  }
   l.push('## Lente desta rodada');
   l.push('Polaridade: ' + (ehOp ? 'OPORTUNIDADES (riscos positivos — eventos incertos que ajudariam o objetivo)' : 'AMEAÇAS (riscos negativos)') + '.');
   if (tec) {
@@ -2356,6 +2372,9 @@ function renderAssistido(pol, tec) {
   if (!tec) {
     h += '<div class="nota nota-aviso"><p>Escolha uma técnica no catálogo acima: o prompt leva a <b>pergunta de disparo literal</b> dela.</p></div>';
   }
+  h += '<div class="campo"><label for="contexto-assistido">Contexto adicional para o modelo <small>(opcional)</small></label>' +
+    '<p class="dica">O que o enquadramento não diz: histórico, números, o que já aconteceu aqui. Entra no prompt como âncora e fica salvo na sessão (vale também na Etapa 3).</p>' +
+    '<textarea id="contexto-assistido" rows="3" data-sessao="contextoAssistido" placeholder="ex.: a migração do portal em 2014 estourou a janela em 3 semanas">' + esc(estado.contextoAssistido) + '</textarea></div>';
   h += '<div class="acoes">' +
     '<button type="button" class="btn' + (tec ? '' : ' btn-fantasma') + '" id="btn-prompt-copiar">Copiar prompt' + (tec ? ' (' + esc(tec.id) + ')' : '') + '</button>' +
     '<button type="button" class="btn btn-fantasma" id="btn-prompt-ver" aria-expanded="false" aria-controls="prompt-assistido">Ver prompt</button>' +
@@ -2453,6 +2472,11 @@ function promptNotas() {
     l.push('- ' + d.titulo + ': ' + d.criterios.map(function (c, i) { return (i + 1) + ' = "' + c + '"'; }).join(' · '));
   });
   l.push('');
+  if (txt(estado.contextoAssistido)) {
+    l.push('## Contexto adicional dado pela pessoa (vale como âncora, cite entre aspas)');
+    l.push(txt(estado.contextoAssistido));
+    l.push('');
+  }
   l.push('## Itens a pontuar');
   var lista = itensPriorizaveis();
   lista.forEach(function (it) {
@@ -2465,8 +2489,10 @@ function promptNotas() {
   });
   l.push('');
   l.push('## Regras');
-  l.push('1. Para cada item proponha P, I prazo, I custo, I escopo/qualidade e se envolve dado sensível. TODA nota cita o critério literal da escala acima (entre aspas) e a ÂNCORA: o trecho do enquadramento ou do enunciado que a sustenta, entre aspas, dizendo a coluna. ' +
-    'Sem âncora, escreva "?" no lugar da nota e diga o que precisaria saber. Inferência vem com "supondo que …" explícito.');
+  l.push('1. Para cada item proponha P, I prazo, I custo, I escopo/qualidade e se envolve dado sensível. TODA nota cita o critério literal da escala acima (entre aspas) e a ÂNCORA: o trecho que a sustenta, entre aspas, dizendo de onde veio. ' +
+    'Âncora válida é: uma coluna do enquadramento, o contexto adicional, ou o PRÓPRIO ENUNCIADO do item — o efeito do enunciado diz qual dimensão de impacto é atingida e em que grau; a causa, quão provável é.');
+  l.push('1b. Para IMPACTO, prefira nota + "supondo que …" explícito a "?": uma suposição declarada a pessoa corrige em um clique; um "?" ela tem que pesquisar. Dimensão que o efeito não atinge é "não se aplica", não "?". ' +
+    'Reserve "?" para quando até a suposição seria invenção — e para P = 4/5 sem fato (regra 2). Quando usar "?", diga em uma linha o que precisaria saber: a pessoa responde no contexto adicional e pede de novo.');
   l.push('2. NUNCA proponha P = 4 ("' + PROBABILIDADE[3].criterio + '") ou P = 5 ("' + PROBABILIDADE[4].criterio + '") sem que o texto diga que aconteceu antes ou está acontecendo — esses dois critérios são factuais, não opinativos.');
   l.push('3. Você não conhece o projeto: não invente fato, número, prazo, contrato ou nome.');
   l.push('4. Dado sensível = "sim" quando a coluna Riscos do enquadramento ou o próprio enunciado fala de dado pessoal, de saúde, sigilo contratual etc.; senão "não"; com âncora.');
@@ -2479,8 +2505,9 @@ function promptNotas() {
   l.push('### R001');
   l.push('P: 4 — "Aconteceu no projeto anterior" — vem de: "<trecho>" (<coluna>)');
   l.push('I prazo: 5 — "Prazo contratual perdido" — vem de: "<trecho>" (<coluna>)');
-  l.push('I custo: ? — sem âncora: <o que precisaria saber>');
-  l.push('I escopo: 2 — "Ajuste menor" — supondo que <inferência>');
+  l.push('I custo: 3 — "Estouro visível, gerenciável" — supondo que <inferência a partir do efeito>');
+  l.push('I escopo: não se aplica — o efeito não atinge escopo');
+  l.push('P (exemplo de quando não há como): ? — só daria 4 se a pessoa disser que isso já aconteceu aqui');
   l.push('dado sensível: sim — vem de: "<trecho>" (<coluna>)');
   l.push('### R002');
   l.push('…');
@@ -2587,6 +2614,10 @@ function renderAssistidoNotas() {
   if (!lista.length) {
     h += '<div class="nota nota-aviso"><p>Nenhum item priorizável ainda — o prompt precisa de enunciados completos.</p></div>';
   }
+  h += '<div class="campo"><label for="contexto-assistido">Contexto adicional para o modelo <small>(opcional)</small></label>' +
+    '<p class="dica">O que o enquadramento não diz e sustenta nota: o que já aconteceu aqui, números, contrato, histórico. É a “conversa” que a skill tem e a página não. ' +
+    'Quando o modelo devolver “?” perguntando algo, responda aqui e copie o prompt de novo. Fica salvo na sessão.</p>' +
+    '<textarea id="contexto-assistido" rows="3" data-sessao="contextoAssistido" placeholder="ex.: a migração do portal em 2014 estourou a janela em 3 semanas; o contrato prevê multa por dia de atraso após 1º/dez">' + esc(estado.contextoAssistido) + '</textarea></div>';
   h += '<div class="acoes">' +
     '<button type="button" class="btn' + (lista.length ? '' : ' btn-fantasma') + '" id="btn-prompt-notas-copiar"' + (lista.length ? '' : ' disabled') + '>Copiar prompt (' + lista.length + ' itens)</button>' +
     '<button type="button" class="btn btn-fantasma" id="btn-prompt-notas-ver" aria-expanded="false" aria-controls="prompt-notas"' + (lista.length ? '' : ' disabled') + '>Ver prompt</button>' +
