@@ -7,7 +7,7 @@ description: Conduz uma sessão de riscos de projeto (método PPPM/BSBr + PMBOK)
 
 ## O que esta skill é
 
-A superfície conversacional do kernel em `metodo/`. O app `docs/index.html` é o mesmo método em formulário, sem IA embutida (nas Etapas 2 e 3 ele tem um *modo assistido* por copiar-e-colar: gera o prompt, lê a resposta colada e deixa a pessoa aceitar candidato a candidato e nota a nota — mesmas regras de `origem`/`origemNota` desta skill); aqui a IA ocupa o passo 1 do fluxo de validação da Aula 2 — **IA gera recomendação → humano valida e decide**. O registro produzido tem os mesmos campos e os mesmos IDs do app, porque os dois leem o mesmo kernel.
+A superfície conversacional do kernel em `metodo/`. O app `docs/index.html` é o mesmo método em formulário, sem IA embutida (nas Etapas 2, 3 e 4 ele tem um *modo assistido* por copiar-e-colar: gera o prompt, lê a resposta colada e deixa a pessoa aceitar candidato a candidato, nota a nota e resposta a resposta — mesmas regras de `origem`/`origemNota`/`origemResposta` desta skill, e os mesmos limites: dono nunca sugerido, gatilho HITL nunca confirmado pela IA); aqui a IA ocupa o passo 1 do fluxo de validação da Aula 2 — **IA gera recomendação → humano valida e decide**. O registro produzido tem os mesmos campos e os mesmos IDs do app, porque os dois leem o mesmo kernel.
 
 **Esta versão cobre o ciclo inteiro: Etapas 1 (Enquadrar), 2 (Identificar), 3 (Priorizar), 4 (Responder) e 5 (Registrar).** A sessão fica salva em disco a cada passo e pode ser retomada em qualquer etapa — inclusive depois de exportada.
 
