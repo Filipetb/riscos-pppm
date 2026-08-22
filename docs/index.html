@@ -239,7 +239,7 @@ details[open]>summary{margin-bottom:.5rem}
         <li><b>A ferramenta não sabe do seu projeto.</b> Toda nota vem de quem preenche; ela não valida se a nota é honesta.</li>
         <li><b>A ferramenta não substitui</b> o plano de gerenciamento de riscos, nem a análise quantitativa, nem o monitoramento contínuo.</li>
         <li><b>Nenhum dado sai da máquina.</b> Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.
-          O <em>modo assistido</em> da Etapa 2 é copiar-e-colar: o prompt sai pela sua mão para o modelo que você escolher, e o que volta
+          O <em>modo assistido</em> (Etapas 2 e 3) é copiar-e-colar: o prompt sai pela sua mão para o modelo que você escolher, e o que volta
           só entra no registro quando você aceita, item a item, com a origem marcada.</li>
       </ul>
     </section>
@@ -280,7 +280,7 @@ T12,Caça à Oportunidade,Identificação de riscos positivos,oportunidade,"Onde
 (function () {
 'use strict';
 
-var APP_VERSAO = '1.1.0';
+var APP_VERSAO = '1.2.0';
 /* metodo/ não declara versão própria. O elo de Processamento da rastreabilidade
    pede "versão do método"; quem cumpre esse papel é a versão do app, que é o que
    fixa as regras aplicadas. O registro diz isso em vez de inventar um marcador
@@ -1401,6 +1401,80 @@ function rodarAutoteste() {
       estado = guardado;
     })();
 
+    /* --- Modo assistido (Etapa 3): nota sugerida com critério + âncora; ---
+       a pessoa fixa; qualidade do dado nunca vem do modelo. */
+    (function () {
+      var guardado = estado;
+      estado = sessaoNova();
+      estado.enquadramento = { contexto: 'ERP go-live 1º/dez', dor: 'integrador único', dados: 'portal de 2014 estourou a janela', riscos: 'cadastro sob LGPD', valor: 'produção' };
+      var a = novoItemCru(); a.id = 'R001'; a.causa = 'c'; a.evento = 'e'; a.efeito = 'f'; a.tecnica = 'T01';
+      var b = novoItemCru(); b.id = 'R002'; b.causa = 'c2'; b.evento = 'e2'; b.efeito = 'f2';
+      var r = novoItemCru(); r.id = 'R003'; r.causa = 'só causa';
+      estado.itens = [a, b, r]; estado.seq = 3;
+
+      var pn = promptNotas();
+      checa('Notas · prompt leva os critérios literais de Probabilidade',
+            PROBABILIDADE.every(function (p) { return pn.indexOf(p.criterio) !== -1; }), true);
+      checa('Notas · prompt leva os critérios literais de Impacto por dimensão',
+            DIMENSOES_IMPACTO.every(function (d) { return d.criterios.every(function (c) { return pn.indexOf(c) !== -1; }); }), true);
+      checa('Notas · prompt lista só itens priorizáveis (rascunho fica de fora)',
+            [pn.indexOf('R001') !== -1, pn.indexOf('R002') !== -1, pn.indexOf('R003') !== -1].join(','), 'true,true,false');
+      checa('Notas · prompt proíbe P 4/5 sem fato, qualidade do dado, severidade, estratégia e dono',
+            /NUNCA proponha P = 4[\s\S]*NÃO sugira qualidade do dado[\s\S]*NÃO calcule severidade[\s\S]*dono/.test(pn), true);
+      checa('Notas · prompt não leva as faixas de severidade (o modelo não classifica)', /15\s*[–-]\s*25/.test(pn), false);
+
+      var resp = 'Segue:\n```\n' + MARCADOR_NOTAS + '\n' +
+        '### R001\nP: 4 — "Aconteceu no projeto anterior" — vem de: "portal de 2014 estourou a janela" (Dados)\n' +
+        'I prazo: 5 — "Prazo contratual perdido" — vem de: "go-live 1º/dez" (Contexto)\nI custo: ? — sem âncora: quanto custa a virada estourada?\n' +
+        'I escopo: 2 — "Ajuste menor" — supondo que o escopo não muda\ndado sensível: sim — vem de: "cadastro sob LGPD" (Riscos)\n' +
+        '**R002**\n- **Probabilidade**: 2 — "Já ouvi falar, mas é raro"\n- Prazo: 3\n- Custo: —\n- Escopo/qualidade: 1\n- Dado sensível: não\n' +
+        'R099\nP: 5\n```';
+      var ln = lerSugestoesNota(resp);
+      checa('Notas · parser lê os blocos por ID, inclusive os que não existem (filtrados depois)', ln.map(function (s) { return s.id; }).join(','), 'R001,R002,R099');
+      checa('Notas · nota e justificativa separadas', [ln[0].probabilidade.n, ln[0].probabilidade.texto].join('|'),
+            '4|"Aconteceu no projeto anterior" — vem de: "portal de 2014 estourou a janela" (Dados)');
+      checa('Notas · "?" vira pendente com o texto preservado', [ln[0].impCusto.n, ln[0].impCusto.texto].map(String).join('|'), 'null|sem âncora: quanto custa a virada estourada?');
+      checa('Notas · dado sensível sim/não com âncora', [ln[0].sensivel.v, ln[0].sensivel.texto, ln[1].sensivel.v].join('|'), 'true|vem de: "cadastro sob LGPD" (Riscos)|false');
+      checa('Notas · rótulos alternativos (Probabilidade/Prazo/Custo/Escopo, negrito, travessão como vazio)',
+            [ln[1].probabilidade.n, ln[1].impPrazo.n, ln[1].impCusto.n, ln[1].impEscopo.n].map(String).join(','), '2,3,null,1');
+      checa('Notas · texto vazio ou sem blocos não produz sugestão', [lerSugestoesNota('').length, lerSugestoesNota('P: 4').length].join(','), '0,0');
+
+      estado.sugestoesNota = {}; ln.forEach(function (s) { if (itemPorId(s.id)) estado.sugestoesNota[s.id] = s; });
+      checa('Notas · ler sugestão não toca o item', [a.probabilidade, a.impPrazo, a.dadoSensivel, a.origemNota].map(String).join('|'), 'null|null|false|');
+      var fix = aplicarSugestaoNota('R001');
+      checa('Notas · usar a sugestão copia só as notas presentes, marca sensível e origem ia-aceito',
+            [fix.probabilidade, fix.impPrazo, fix.impCusto, fix.impEscopo, fix.dadoSensivel, fix.origemNota, fix.qualidade].map(String).join('|'), '4|5|null|2|true|ia-aceito|');
+      checa('Notas · severidade continua derivada no app (4 × 5 = 20 → Alto)', [severidadeDoItem(fix), faixaA(severidadeDoItem(fix)).rotulo].join('|'), '20|Alto');
+      checa('Notas · sugestão some depois de usada', !!estado.sugestoesNota.R001, false);
+      atualizarOrigemNota(fix, 'impCusto', null, 3);
+      checa('Notas · preencher um "?" não vira ajuste', fix.origemNota, 'ia-aceito');
+      atualizarOrigemNota(fix, 'probabilidade', 4, 3);
+      checa('Notas · mudar uma nota sugerida vira ia-ajustado', fix.origemNota, 'ia-ajustado');
+      atualizarOrigemNota(b, 'probabilidade', null, 2);
+      checa('Notas · nota dada sem sugestão é humano', b.origemNota, 'humano');
+      atualizarOrigemNota(b, 'qualidade', '', 'alta');
+      checa('Notas · qualidade não mexe na origem da nota', b.origemNota, 'humano');
+      descartarSugestaoNota('R002');
+      checa('Notas · descartar não toca o item', [b.probabilidade, Object.keys(estado.sugestoesNota).length].map(String).join('|'), 'null|0');
+      checa('Notas · aplicar sugestão inexistente não faz nada', aplicarSugestaoNota('R002'), null);
+
+      var salvoN = desserializarSessao(serializarSessao({
+        itens: [{ id: 'R001', origemNota: 'ia-aceito', baseAvaliacao: 'relatório' }, { id: 'R002', origemNota: 'x', baseAvaliacao: 7 }],
+        sugestoesNota: { 'R001': { probabilidade: { n: 9, texto: 'a' } }, 'lixo': { probabilidade: { n: 3 } }, 'R005': 'x', 'r7': { sensivel: { v: true } } } }));
+      checa('Notas · origemNota fora do domínio cai; baseAvaliacao não-texto cai',
+            salvoN.itens.map(function (it) { return it.origemNota + ':' + it.baseAvaliacao; }).join(','), 'ia-aceito:relatório,:');
+      checa('Notas · sugestões sobrevivem ao recarregar saneadas (nota 9 cai mas o texto segura o bloco; id lixo e bloco vazio caem; r7 vira R007)',
+            Object.keys(salvoN.sugestoesNota).sort().join(',') + '|' + String(salvoN.sugestoesNota.R001.probabilidade.n), 'R001,R007|null');
+      checa('Notas · ID é normalizado', [idNormalizado('r1'), idNormalizado('**R012**'), idNormalizado('X1')].join(','), 'R001,R012,');
+
+      var itN = novoItemCru(); itN.id = 'R009'; itN.origemNota = 'ia-ajustado'; itN.baseAvaliacao = 'contrato';
+      checa('Notas · elo de validação declara a origem da nota', /Origem da nota: ia-ajustado/.test(eloValidacao(itN)), true);
+      checa('Notas · elo de entrada leva a base da avaliação', /Base da avaliação \(de onde vem o número\): contrato/.test(eloEntrada(itN)), true);
+      checa('Notas · pílula só para origem IA', [pilulaOrigemNota('humano'), /nota IA · aceito/.test(pilulaOrigemNota('ia-aceito'))].join('|'), '|true');
+
+      estado = guardado;
+    })();
+
     /* --- Promoção do risco secundário: rastreável e idempotente ---------- */
     var origemP = itemDeTeste('R020', 'Ana Ribeiro');
     origemP.riscoSecundario = 'conflito de responsabilidade entre integradores';
@@ -1657,6 +1731,8 @@ function novoItemCru() {
     origem: '',   /* '' (sessão antiga) · humano · ia-aceito · ia-ajustado */
     probabilidade: null, impPrazo: null, impCusto: null, impEscopo: null,
     qualidade: '',
+    origemNota: '',      /* mesma escala de `origem`, para a nota da Régua A */
+    baseAvaliacao: '',   /* "De onde vem esse número?" — elo Entrada da rastreabilidade */
     estrategia: '', acao: '', dono: '', gatilho: '', residual: '',
     justificativa: '', destinatario: '', replanejamento: '',
     riscoSecundario: '', riscoSecundarioFaixa: '', riscoSecundarioAvaliado: false,
@@ -1678,6 +1754,7 @@ function sessaoNova() {
     tecnicaAtiva: { ameaca: '', oportunidade: '' },
     novo: { tecnica: '', causa: '', evento: '', efeito: '' },
     sugestoes: [],   /* modo assistido: candidatos colados, ainda sem ID — não são itens */
+    sugestoesNota: {},   /* modo assistido (Etapa 3): notas sugeridas por ID, ainda não fixadas */
     abaResponder: 'respostas',
     itens: [], seq: 0
   };
@@ -1730,11 +1807,12 @@ function sanearItem(bruto) {
   it.polaridade = noDominio(it.polaridade, ['ameaca', 'oportunidade'], 'ameaca');
   ['causa', 'evento', 'efeito', 'acao', 'dono', 'gatilho', 'residual', 'justificativa',
    'destinatario', 'replanejamento', 'riscoSecundario', 'tecnica', 'validadoEm',
-   'promovidoPara', 'origemRiscoSecundario'].forEach(function (k) { it[k] = textoOuVazio(it[k]); });
+   'promovidoPara', 'origemRiscoSecundario', 'baseAvaliacao'].forEach(function (k) { it[k] = textoOuVazio(it[k]); });
   ['probabilidade', 'impPrazo', 'impCusto', 'impEscopo',
    'bImpacto', 'bViabilidade', 'bDados', 'bSeguranca', 'bValor'].forEach(function (k) { it[k] = notaOuNulo(it[k]); });
   it.qualidade = noDominio(it.qualidade, ['', 'alta', 'media', 'baixa'], '');
   it.origem = noDominio(it.origem, ORIGENS, '');
+  it.origemNota = noDominio(it.origemNota, ORIGENS, '');
   it.decisao = noDominio(it.decisao, ['', 'aceite', 'ajuste'], '');
   it.riscoSecundarioFaixa = noDominio(it.riscoSecundarioFaixa, ['', 'baixo', 'medio', 'alto'], '');
   it.dadoSensivel = it.dadoSensivel === true;
@@ -1765,6 +1843,14 @@ function desserializarSessao(bruto) {
   if (!base.tecnicaAtiva || typeof base.tecnicaAtiva !== 'object') base.tecnicaAtiva = { ameaca: '', oportunidade: '' };
   if (!base.novo || typeof base.novo !== 'object') base.novo = { tecnica: '', causa: '', evento: '', efeito: '' };
   base.sugestoes = Array.isArray(base.sugestoes) ? base.sugestoes.map(sanearSugestao).filter(Boolean) : [];
+  var sn = {};
+  if (base.sugestoesNota && typeof base.sugestoesNota === 'object' && !Array.isArray(base.sugestoesNota)) {
+    Object.keys(base.sugestoesNota).forEach(function (id) {
+      var s = sanearSugestaoNota(base.sugestoesNota[id], id);
+      if (s) sn[s.id] = s;
+    });
+  }
+  base.sugestoesNota = sn;
   base.conduzidaPor = textoOuVazio(base.conduzidaPor);
   base.etapa = (typeof base.etapa === 'number' && isFinite(base.etapa) &&
                 base.etapa >= 1 && base.etapa <= 5) ? Math.round(base.etapa) : 1;
@@ -2311,6 +2397,231 @@ function renderAssistido(pol, tec) {
   return h;
 }
 
+/* ---------------------------------------------------------------------
+   7c. MODO ASSISTIDO (Etapa 3) — nota sugerida com critério literal + âncora;
+   a pessoa fixa. Projeção de references/etapa-3-priorizar.md: toda sugestão
+   cita o critério do kernel e o trecho que a sustenta; `?` onde não há
+   âncora; P = 4/5 só com fato dito; qualidade do dado NÃO é sugerida — vem de
+   "De onde vem esse número?", que só a pessoa responde. Severidade e faixa
+   continuam derivadas aqui, nunca vindas do modelo.
+   --------------------------------------------------------------------- */
+var MARCADOR_NOTAS = 'RISCOS-PPPM/notas/v1';
+var CAMPOS_NOTA_A = ['probabilidade', 'impPrazo', 'impCusto', 'impEscopo'];
+
+function idNormalizado(bruto) {
+  var m = /^\s*\**\s*R\s*0*(\d{1,4})\b/i.exec(String(bruto == null ? '' : bruto));
+  if (!m) return '';
+  var n = m[1];
+  while (n.length < 3) n = '0' + n;
+  return 'R' + n;
+}
+
+function sanearSugestaoNota(bruto, idChave) {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  var id = idNormalizado(bruto.id || idChave);
+  if (!id) return null;
+  function nota(v) {
+    if (!v || typeof v !== 'object') return { n: null, texto: '' };
+    return { n: ehNota(v.n) ? v.n : null, texto: textoOuVazio(v.texto) };
+  }
+  var sv = bruto.sensivel && typeof bruto.sensivel === 'object' ? bruto.sensivel : {};
+  var s = {
+    id: id,
+    probabilidade: nota(bruto.probabilidade), impPrazo: nota(bruto.impPrazo),
+    impCusto: nota(bruto.impCusto), impEscopo: nota(bruto.impEscopo),
+    sensivel: { v: sv.v === true ? true : sv.v === false ? false : null, texto: textoOuVazio(sv.texto) }
+  };
+  var temAlgo = CAMPOS_NOTA_A.some(function (k) { return s[k].n !== null || txt(s[k].texto); }) || s.sensivel.v !== null;
+  return temAlgo ? s : null;
+}
+
+function promptNotas() {
+  var l = [];
+  l.push('Você vai me ajudar a priorizar riscos já identificados (método PPPM/BSBr + PMBOK, processo Realizar a Análise Qualitativa dos Riscos — Régua A, Probabilidade × Impacto). ' +
+    'Você SUGERE notas; eu fixo. Responda em português do Brasil.');
+  l.push('');
+  l.push('## Enquadramento (mapa inicial de oportunidades)');
+  COLUNAS_ENQUADRAMENTO.forEach(function (c) {
+    l.push('- ' + c.titulo + ' — ' + c.pergunta + ' ' + (txt(estado.enquadramento[c.chave]) || '(não informado)'));
+  });
+  l.push('');
+  l.push('## Escalas do método (use os critérios LITERALMENTE)');
+  l.push('Probabilidade:');
+  PROBABILIDADE.forEach(function (p) { l.push('- ' + p.n + ' = ' + p.rotulo + ' — "' + p.criterio + '"'); });
+  l.push('Impacto, por dimensão (a nota final do item é a MAIOR entre as três — mas você não calcula isso, só propõe por dimensão):');
+  DIMENSOES_IMPACTO.forEach(function (d) {
+    l.push('- ' + d.titulo + ': ' + d.criterios.map(function (c, i) { return (i + 1) + ' = "' + c + '"'; }).join(' · '));
+  });
+  l.push('');
+  l.push('## Itens a pontuar');
+  var lista = itensPriorizaveis();
+  lista.forEach(function (it) {
+    var tec = tecnicaPorId(it.tecnica);
+    var fixado = CAMPOS_NOTA_A.filter(function (k) { return ehNota(it[k]); });
+    l.push('- ' + it.id + ' (' + (it.polaridade === 'oportunidade' ? 'oportunidade' : 'ameaça') + (tec ? ', ' + tec.id + ' ' + tec.tecnica : '') + '): ' + enunciadoDe(it) +
+      (fixado.length ? ' [já tem nota fixada pela pessoa: P=' + (ehNota(it.probabilidade) ? it.probabilidade : '—') +
+        ', I prazo/custo/escopo=' + [it.impPrazo, it.impCusto, it.impEscopo].map(function (v) { return ehNota(v) ? v : '—'; }).join('/') +
+        ' — só proponha diferente se houver motivo ancorado]' : ''));
+  });
+  l.push('');
+  l.push('## Regras');
+  l.push('1. Para cada item proponha P, I prazo, I custo, I escopo/qualidade e se envolve dado sensível. TODA nota cita o critério literal da escala acima (entre aspas) e a ÂNCORA: o trecho do enquadramento ou do enunciado que a sustenta, entre aspas, dizendo a coluna. ' +
+    'Sem âncora, escreva "?" no lugar da nota e diga o que precisaria saber. Inferência vem com "supondo que …" explícito.');
+  l.push('2. NUNCA proponha P = 4 ("' + PROBABILIDADE[3].criterio + '") ou P = 5 ("' + PROBABILIDADE[4].criterio + '") sem que o texto diga que aconteceu antes ou está acontecendo — esses dois critérios são factuais, não opinativos.');
+  l.push('3. Você não conhece o projeto: não invente fato, número, prazo, contrato ou nome.');
+  l.push('4. Dado sensível = "sim" quando a coluna Riscos do enquadramento ou o próprio enunciado fala de dado pessoal, de saúde, sigilo contratual etc.; senão "não"; com âncora.');
+  l.push('5. NÃO sugira qualidade do dado (isso vem de "De onde vem esse número?", que só a pessoa responde), NÃO calcule severidade nem classifique nada como alto/médio/baixo, NÃO sugira estratégia, ação ou dono — são de outras etapas.');
+  l.push('6. Responda SOMENTE no formato abaixo, sem texto antes ou depois; um bloco por item, com o ID exato.');
+  l.push('');
+  l.push('## Formato da resposta');
+  l.push('```');
+  l.push(MARCADOR_NOTAS);
+  l.push('### R001');
+  l.push('P: 4 — "Aconteceu no projeto anterior" — vem de: "<trecho>" (<coluna>)');
+  l.push('I prazo: 5 — "Prazo contratual perdido" — vem de: "<trecho>" (<coluna>)');
+  l.push('I custo: ? — sem âncora: <o que precisaria saber>');
+  l.push('I escopo: 2 — "Ajuste menor" — supondo que <inferência>');
+  l.push('dado sensível: sim — vem de: "<trecho>" (<coluna>)');
+  l.push('### R002');
+  l.push('…');
+  l.push('```');
+  return l.join('\n');
+}
+
+/* Lê a resposta colada. Aceita "### R001", "R001:", "**R001**", "- R001";
+   rótulos P/probabilidade, I prazo/prazo, I custo/custo, I escopo(/qualidade),
+   dado sensível; valor = nota 1–5 ou "?" (vira pendente), seguido do texto de
+   justificativa, que é guardado e mostrado — a pessoa precisa ler a âncora. */
+function lerSugestoesNota(texto) {
+  var linhas = String(texto == null ? '' : texto).replace(/\r\n?/g, '\n').split('\n');
+  var porId = {}, ordem = [], atual = null;
+  var reCab = /^\s*(?:#{1,6}\s*)?[-*•]?\s*\**\s*(R\s*\d{1,4})\s*\**\s*[:：\-–—.)]?\s*(.*)$/i;
+  var reCampo = /^\s*[-*•]?\s*\**\s*(P|prob(?:abilidade)?|I\s*prazo|prazo|I\s*custo|custo|I\s*escopo(?:\s*\/?\s*qualidade)?|escopo(?:\s*\/?\s*qualidade)?|dado\s+sens[ií]vel|sens[ií]vel)\s*\**\s*[:：=]\s*(.+?)\s*$/i;
+
+  function campoDe(rotulo) {
+    var r = rotulo.toLowerCase().replace(/\s+/g, ' ');
+    if (r === 'p' || r.indexOf('prob') === 0) return 'probabilidade';
+    if (r.indexOf('prazo') !== -1) return 'impPrazo';
+    if (r.indexOf('custo') !== -1) return 'impCusto';
+    if (r.indexOf('escopo') !== -1) return 'impEscopo';
+    return 'sensivel';
+  }
+  function valorDe(v) {
+    var s = String(v).replace(/^\**|\**$/g, '').trim();
+    var m = /^(\d)\b\s*(.*)$/.exec(s);
+    if (m) { var n = parseInt(m[1], 10); return { n: ehNota(n) ? n : null, texto: m[2].replace(/^[\s\-–—:]+/, '').trim() }; }
+    var q = /^[?？]|^(?:—|-|n\/a|não se aplica|nao se aplica)\b/i.exec(s);
+    if (q) return { n: null, texto: s.replace(/^[?？—\-]+\s*/, '').replace(/^[\s\-–—:]+/, '').trim() };
+    return { n: null, texto: s };
+  }
+  function boolDe(v) {
+    var s = String(v).replace(/^\**|\**$/g, '').trim();
+    var m = /^(sim|s|yes|true|n[aã]o|n|no|false)\b\s*(.*)$/i.exec(s);
+    if (!m) return { v: null, texto: s };
+    var t = m[1].toLowerCase();
+    return { v: (t === 'sim' || t === 's' || t === 'yes' || t === 'true'), texto: m[2].replace(/^[\s\-–—:]+/, '').trim() };
+  }
+
+  linhas.forEach(function (linha) {
+    var s = linha.replace(/^\s*```.*$/, '');
+    if (!txt(s) || txt(s) === MARCADOR_NOTAS) return;
+    var mc = reCampo.exec(s);
+    if (mc && atual) {
+      var campo = campoDe(mc[1]);
+      if (campo === 'sensivel') atual.sensivel = boolDe(mc[2]);
+      else atual[campo] = valorDe(mc[2]);
+      return;
+    }
+    var mh = reCab.exec(s);
+    if (mh) {
+      var id = idNormalizado(mh[1]);
+      if (!id) return;
+      if (!porId[id]) {
+        porId[id] = { id: id, probabilidade: { n: null, texto: '' }, impPrazo: { n: null, texto: '' },
+                      impCusto: { n: null, texto: '' }, impEscopo: { n: null, texto: '' }, sensivel: { v: null, texto: '' } };
+        ordem.push(id);
+      }
+      atual = porId[id];
+      /* "R001: P 4, I prazo 5" numa linha só não é suportado: o resto da linha é ignorado */
+      return;
+    }
+  });
+
+  return ordem.map(function (id) { return sanearSugestaoNota(porId[id], id); }).filter(Boolean);
+}
+
+/* Usar a sugestão é o único caminho dela para o item: copia só as notas
+   presentes (as "?" ficam para a pessoa), marca origemNota = ia-aceito, e a
+   sugestão some. Qualidade do dado e base da avaliação NÃO vêm daqui. */
+function aplicarSugestaoNota(id) {
+  var s = estado.sugestoesNota[id], it = itemPorId(id);
+  if (!s || !it) return null;
+  CAMPOS_NOTA_A.forEach(function (k) { if (s[k].n !== null) it[k] = s[k].n; });
+  if (s.sensivel.v !== null) it.dadoSensivel = s.sensivel.v;
+  it.origemNota = 'ia-aceito';
+  delete estado.sugestoesNota[id];
+  return it;
+}
+function descartarSugestaoNota(id) { delete estado.sugestoesNota[id]; }
+
+/* Regra da origem da nota ao editar no formulário: sem sugestão → humano;
+   mudar uma nota que veio da sugestão → ia-ajustado; preencher um "?" que a
+   sugestão deixou em branco não é ajuste. */
+function atualizarOrigemNota(it, campo, anterior, novo) {
+  if (CAMPOS_NOTA_A.indexOf(campo) === -1) return;
+  if (!it.origemNota) { it.origemNota = 'humano'; return; }
+  if (it.origemNota === 'ia-aceito' && ehNota(anterior) && anterior !== novo) it.origemNota = 'ia-ajustado';
+}
+
+var respostaNotas = '';
+
+function renderAssistidoNotas() {
+  var lista = itensPriorizaveis();
+  var pendentes = Object.keys(estado.sugestoesNota).filter(function (id) { return itemPorId(id); }).length;
+  var h = '<div class="bloco bloco-quieto" id="bloco-assistido-notas">';
+  h += '<h3>Modo assistido <span class="pilula pilula-neutra">opcional · copiar e colar</span>' +
+    (pendentes ? ' <span class="pilula pilula-aviso">' + pendentes + ' sugest' + (pendentes > 1 ? 'ões' : 'ão') + ' aguardando</span>' : '') + '</h3>';
+  h += '<p><small>O prompt leva o enquadramento, as escalas literais do método e os itens; o modelo devolve <b>nota sugerida com critério e âncora</b> (ou “?” onde não há) — ' +
+    'e nada entra até você clicar <b>Usar estas notas</b> no item, onde ainda pode mudar. Qualidade do dado o modelo não sugere: é você quem responde “de onde vem esse número?”. ' +
+    'Severidade e faixa continuam calculadas aqui.</small></p>';
+  if (!lista.length) {
+    h += '<div class="nota nota-aviso"><p>Nenhum item priorizável ainda — o prompt precisa de enunciados completos.</p></div>';
+  }
+  h += '<div class="acoes">' +
+    '<button type="button" class="btn' + (lista.length ? '' : ' btn-fantasma') + '" id="btn-prompt-notas-copiar"' + (lista.length ? '' : ' disabled') + '>Copiar prompt (' + lista.length + ' itens)</button>' +
+    '<button type="button" class="btn btn-fantasma" id="btn-prompt-notas-ver" aria-expanded="false" aria-controls="prompt-notas"' + (lista.length ? '' : ' disabled') + '>Ver prompt</button>' +
+    '<span id="status-prompt-notas" aria-live="polite"></span></div>';
+  h += '<textarea id="prompt-notas" rows="14" readonly hidden aria-label="Prompt para o modelo de IA"></textarea>';
+  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-notas">Cole a resposta do modelo</label>' +
+    '<textarea id="resposta-notas" rows="6" placeholder="' + esc(MARCADOR_NOTAS) + '\n### R001\nP: 4 — &quot;critério&quot; — vem de: &quot;trecho&quot; (coluna)\nI prazo: …\nI custo: …\nI escopo: …\ndado sensível: sim/não — …"></textarea></div>';
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-notas">Ler sugestões</button>' +
+    '<span id="status-notas" aria-live="polite"></span></div>';
+  h += '</div>';
+  return h;
+}
+
+function renderSugestaoNotaNoCartao(it) {
+  var s = estado.sugestoesNota[it.id];
+  if (!s) return '';
+  var linhas = [];
+  var rot = { probabilidade: 'P', impPrazo: 'I prazo', impCusto: 'I custo', impEscopo: 'I escopo/qualidade' };
+  CAMPOS_NOTA_A.forEach(function (k) {
+    var v = s[k];
+    linhas.push('<li><b>' + rot[k] + ' = ' + (v.n === null ? '?' : v.n) + '</b>' + (v.texto ? ' — ' + esc(v.texto) : (v.n === null ? ' — sem âncora: você decide' : '')) + '</li>');
+  });
+  linhas.push('<li><b>Dado sensível: ' + (s.sensivel.v === null ? '?' : s.sensivel.v ? 'sim' : 'não') + '</b>' + (s.sensivel.texto ? ' — ' + esc(s.sensivel.texto) : '') + '</li>');
+  return '<div class="nota nota-acc" data-sug-nota="' + esc(it.id) + '"><p><b>Sugestão do modelo — ainda não fixada.</b> Leia o critério e a âncora de cada nota; “?” é onde o modelo não tinha base.</p>' +
+    '<ul>' + linhas.join('') + '</ul>' +
+    '<div class="acoes"><button type="button" class="btn btn-mini" data-nota-aplicar="' + esc(it.id) + '">Usar estas notas (você ainda pode mudar)</button>' +
+    '<button type="button" class="btn btn-fantasma btn-mini" data-nota-descartar="' + esc(it.id) + '">Descartar</button></div></div>';
+}
+
+function pilulaOrigemNota(o) {
+  if (!o || o === 'humano') return '';
+  return '<span class="pilula pilula-acc" title="Nota sugerida por um modelo de IA fora da página e ' +
+    (o === 'ia-aceito' ? 'fixada sem alteração' : 'alterada pela pessoa') + '">nota ' + esc(rotuloOrigem(o)) + '</span>';
+}
+
 /* --- Etapa 2: Identificar --- */
 function renderEtapa2() {
   var pol = estado.abaIdentificar;
@@ -2483,6 +2794,8 @@ function renderEtapa3() {
   var priorizaveis = itensPriorizaveis();
   var rascunhos = estado.itens.filter(ehRascunho);
 
+  h += renderAssistidoNotas();
+
   h += '<div class="bloco">';
   h += '<h3>Riscos priorizáveis <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
   if (!priorizaveis.length) {
@@ -2511,8 +2824,9 @@ function renderEtapa3() {
 
 function cartaoPriorizar(it) {
   var h = '<div class="item"><div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
-    pilulaPolaridade(it.polaridade) + '</div>' +
+    pilulaPolaridade(it.polaridade) + pilulaOrigem(it.origem) + pilulaOrigemNota(it.origemNota) + '</div>' +
     '<p class="enunciado">' + esc(enunciadoDe(it)) + '</p>';
+  h += renderSugestaoNotaNoCartao(it);
   h += '<div class="campo"><label for="p-' + esc(it.id) + '">Probabilidade (1–5)</label>' +
     '<select id="p-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="probabilidade" data-num="1">' +
     opcoesProbabilidade(it.probabilidade) + '</select></div>';
@@ -2523,6 +2837,9 @@ function cartaoPriorizar(it) {
       opcoesImpacto(d, it[d.chave]) + '</select></div>';
   });
   h += '</div>';
+  h += '<div class="campo"><label for="base-' + esc(it.id) + '">De onde vem esse número?</label>' +
+    '<p class="dica">A base da avaliação — relatório, contrato, experiência de quem viveu, ou estimativa. É o que sustenta a qualidade do dado abaixo e fica no registro.</p>' +
+    '<textarea id="base-' + esc(it.id) + '" rows="2" data-item="' + esc(it.id) + '" data-campo="baseAvaliacao" placeholder="ex.: relatório mensal do call center: pico em todo janeiro desde 2022">' + esc(it.baseAvaliacao) + '</textarea></div>';
   h += '<div class="campo"><label for="q-' + esc(it.id) + '">Qualidade do dado</label>' +
     '<p class="dica">Um risco pontuado por chute tem a mesma cor na matriz que um risco pontuado por evidência.</p>' +
     '<select id="q-' + esc(it.id) + '" data-item="' + esc(it.id) + '" data-campo="qualidade">' +
@@ -3123,7 +3440,8 @@ function eloEntrada(it) {
     ' | Dados: ' + txt(estado.enquadramento.dados) +
     ' | Riscos declarados: ' + txt(estado.enquadramento.riscos) +
     ' | Valor: ' + txt(estado.enquadramento.valor) +
-    ' | Técnica aplicada: ' + (tec ? tec.id + ' ' + tec.tecnica + ' (' + tec.origem_pmbok + ')' : 'não registrada');
+    ' | Técnica aplicada: ' + (tec ? tec.id + ' ' + tec.tecnica + ' (' + tec.origem_pmbok + ')' : 'não registrada') +
+    ' | Base da avaliação (de onde vem o número): ' + (txt(it.baseAvaliacao) || 'não registrada');
 }
 function eloProcessamento(it) {
   var tec = tecnicaPorId(it.tecnica);
@@ -3155,6 +3473,10 @@ function eloValidacao(it) {
     (it.origem === 'ia-aceito' || it.origem === 'ia-ajustado'
       ? ' | Origem do enunciado: ' + it.origem + ' (sugerido por modelo de IA fora da página, no modo assistido; ' +
         (it.origem === 'ia-aceito' ? 'aceito sem alteração' : 'alterado antes de aceitar') + ' pela pessoa)'
+      : '') +
+    (it.origemNota === 'ia-aceito' || it.origemNota === 'ia-ajustado'
+      ? ' | Origem da nota: ' + it.origemNota + ' (nota sugerida por modelo de IA fora da página, com critério e âncora; ' +
+        (it.origemNota === 'ia-aceito' ? 'fixada sem alteração' : 'alterada') + ' pela pessoa)'
       : '');
 }
 function eloRegistro(it) {
@@ -3304,11 +3626,15 @@ function gerarMarkdown() {
   l.push('');
   l.push('> ⚠️ ' + NOTA_COLAPSO);
   l.push('');
-  var vindosDeIA = estado.itens.filter(function (it) { return it.origem === 'ia-aceito' || it.origem === 'ia-ajustado'; });
-  if (vindosDeIA.length) {
-    l.push('> 🤖 **Modo assistido (Etapa 2):** ' + vindosDeIA.map(function (it) { return it.id + ' (' + it.origem + ')'; }).join(', ') +
-      ' vieram de sugestões de um modelo de IA usado fora da página e aceitas pela pessoa — `ia-aceito` = sem alteração · `ia-ajustado` = alterado antes de aceitar. ' +
-      'A IA ocupou o passo 1 do fluxo de validação; nada entrou sem decisão humana.');
+  var ehIA = function (o) { return o === 'ia-aceito' || o === 'ia-ajustado'; };
+  var vindosDeIA = estado.itens.filter(function (it) { return ehIA(it.origem); });
+  var notasDeIA = estado.itens.filter(function (it) { return ehIA(it.origemNota); });
+  if (vindosDeIA.length || notasDeIA.length) {
+    l.push('> 🤖 **Modo assistido:** ' +
+      (vindosDeIA.length ? 'enunciados ' + vindosDeIA.map(function (it) { return it.id + ' (' + it.origem + ')'; }).join(', ') + (notasDeIA.length ? '; ' : '') : '') +
+      (notasDeIA.length ? 'notas da Régua A ' + notasDeIA.map(function (it) { return it.id + ' (' + it.origemNota + ')'; }).join(', ') : '') +
+      ' vieram de sugestões de um modelo de IA usado fora da página e fixadas pela pessoa — `ia-aceito` = sem alteração · `ia-ajustado` = alterado. ' +
+      'A IA ocupou o passo 1 do fluxo de validação; nada entrou sem decisão humana, e severidade/faixa são calculadas pelo app.');
     l.push('');
   }
 
@@ -3585,6 +3911,8 @@ function render() {
   else painel.innerHTML = renderEtapa5();
   var taResposta = $('#resposta-assistente');
   if (taResposta && respostaAssistente) taResposta.value = respostaAssistente;
+  var taRespostaN = $('#resposta-notas');
+  if (taRespostaN && respostaNotas) taRespostaN.value = respostaNotas;
   atualizarDerivados();
   salvar();   /* salvar() ignora sessão virgem: abrir a página não cria registro */
 }
@@ -3735,6 +4063,7 @@ function ligarEventos() {
       return;
     }
     if (t.id === 'resposta-assistente') { respostaAssistente = t.value; return; }
+    if (t.id === 'resposta-notas') { respostaNotas = t.value; return; }
     if (t.hasAttribute && t.hasAttribute('data-item') && t.hasAttribute('data-campo')) {
       aplicarCampo(t); return;
     }
@@ -3763,7 +4092,7 @@ function ligarEventos() {
   });
 
   painel.addEventListener('click', function (ev) {
-    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],[data-sug-aceitar],[data-sug-descartar],#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md,#btn-prompt-copiar,#btn-prompt-ver,#btn-ler-sugestoes,#btn-sug-limpar') : null;
+    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],[data-sug-aceitar],[data-sug-descartar],[data-nota-aplicar],[data-nota-descartar],#btn-prompt-notas-copiar,#btn-prompt-notas-ver,#btn-ler-notas,#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md,#btn-prompt-copiar,#btn-prompt-ver,#btn-ler-sugestoes,#btn-sug-limpar') : null;
     if (!t) return;
 
     /* --- modo assistido --- */
@@ -3803,6 +4132,44 @@ function ligarEventos() {
       if (alvoS) alvoS.innerHTML = '<small><b>' + lidas.length + (lidas.length > 1 ? ' sugestões lidas' : ' sugestão lida') + '.</b> Nenhuma é item ainda: decida uma a uma abaixo.</small>';
       return;
     }
+    if (t.id === 'btn-prompt-notas-copiar' || t.id === 'btn-prompt-notas-ver') {
+      var promptN = promptNotas();
+      var taN = $('#prompt-notas'), stN = $('#status-prompt-notas'), btnVerN = $('#btn-prompt-notas-ver');
+      if (taN) taN.value = promptN;
+      if (t.id === 'btn-prompt-notas-ver') {
+        var abertoN = taN && !taN.hidden;
+        if (taN) taN.hidden = abertoN;
+        if (btnVerN) { btnVerN.textContent = abertoN ? 'Ver prompt' : 'Esconder prompt'; btnVerN.setAttribute('aria-expanded', String(!abertoN)); }
+        return;
+      }
+      copiarTexto(promptN, taN, function (ok) {
+        if (!stN) return;
+        stN.innerHTML = ok
+          ? '<small><b>Prompt copiado.</b> Cole no seu modelo de IA e traga a resposta para o campo abaixo.</small>'
+          : '<small><b>Não deu para copiar automaticamente.</b> O prompt está aberto abaixo: selecione e copie.</small>';
+        if (!ok && taN) { taN.hidden = false; if (btnVerN) btnVerN.textContent = 'Esconder prompt'; try { taN.focus(); taN.select(); } catch (e) { /* ignorado */ } }
+      });
+      return;
+    }
+    if (t.id === 'btn-ler-notas') {
+      var taRN = $('#resposta-notas'), stSN = $('#status-notas');
+      var lidasN = lerSugestoesNota(taRN ? taRN.value : respostaNotas);
+      var conhecidas = lidasN.filter(function (s) { return !!itemPorId(s.id); });
+      if (!conhecidas.length) {
+        if (stSN) stSN.innerHTML = '<small class="nota-erro"><b>Nenhuma sugestão reconhecida.</b> O texto precisa de um bloco por item começando pelo ID (<code>### R001</code>) com linhas <code>P:</code>, <code>I prazo:</code>, <code>I custo:</code>, <code>I escopo:</code> e <code>dado sensível:</code>' +
+          (lidasN.length ? ' — os IDs colados (' + esc(lidasN.map(function (s) { return s.id; }).join(', ')) + ') não existem neste registro.' : '.') + '</small>';
+        return;
+      }
+      conhecidas.forEach(function (s) { estado.sugestoesNota[s.id] = s; });
+      respostaNotas = '';
+      render();
+      var alvoSN = $('#status-notas');
+      if (alvoSN) alvoSN.innerHTML = '<small><b>' + conhecidas.length + (conhecidas.length > 1 ? ' sugestões lidas' : ' sugestão lida') + '.</b> Nenhuma nota foi fixada: veja cada item abaixo.' +
+        (lidasN.length > conhecidas.length ? ' IDs ignorados por não existirem: ' + esc(lidasN.filter(function (s) { return !itemPorId(s.id); }).map(function (s) { return s.id; }).join(', ')) + '.' : '') + '</small>';
+      return;
+    }
+    if (t.hasAttribute('data-nota-aplicar')) { aplicarSugestaoNota(t.getAttribute('data-nota-aplicar')); render(); return; }
+    if (t.hasAttribute('data-nota-descartar')) { descartarSugestaoNota(t.getAttribute('data-nota-descartar')); render(); return; }
     if (t.hasAttribute('data-sug-aceitar')) { aceitarSugestao(parseInt(t.getAttribute('data-sug-aceitar'), 10)); render(); return; }
     if (t.hasAttribute('data-sug-descartar')) { descartarSugestao(parseInt(t.getAttribute('data-sug-descartar'), 10)); render(); return; }
     if (t.id === 'btn-sug-limpar') {
@@ -3893,7 +4260,9 @@ function aplicarCampo(t, estrutural) {
   if (t.type === 'checkbox') valor = t.checked;
   else if (t.hasAttribute('data-num')) valor = t.value === '' ? null : parseInt(t.value, 10);
   else valor = t.value;
+  var anterior = it[campo];
   it[campo] = valor;
+  atualizarOrigemNota(it, campo, anterior, valor);
 
   /* Digitar no risco secundário desmarca "avaliei e não há"; marcar a caixa
      limpa o texto — inclusive no DOM, que a normalização sozinha não alcança. */
