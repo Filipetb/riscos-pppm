@@ -6,6 +6,8 @@ Uma sessão guiada que leva você de "não sei quais são meus riscos" a um regi
 
 **➤ [Abrir a sessão de riscos](https://filipetb.github.io/riscos-pppm/)** — roda no navegador, offline, sem instalar nada.
 
+**➤ [Como usar](https://filipetb.github.io/riscos-pppm/como-usar.html)** — instruções passo a passo para os dois caminhos: navegador (HTML offline) e Claude Code (skill `/riscos`).
+
 > O método (`metodo/`) e a interface web (`docs/index.html`) estão prontos. A skill do Claude Code (`/riscos`) cobre o ciclo inteiro, Etapas 1–5 (Enquadrar, Identificar, Priorizar, Responder e Registrar), com exportação CSV/Markdown em paridade com o app.
 
 ---
@@ -17,6 +19,8 @@ Ferramentas de risco assumem que você já tem a lista. Planilha não conduz nin
 Este projeto empacota as técnicas de identificação do PMBOK em perguntas concretas que qualquer pessoa consegue responder, calcula a priorização de forma consistente, e obriga a definir quem decide antes de encerrar.
 
 ## Como usar
+
+> Versão passo a passo, com os botões do app e os comandos da skill: **[Como usar](https://filipetb.github.io/riscos-pppm/como-usar.html)** (`docs/como-usar.html`).
 
 **Pelo navegador** — abra <https://filipetb.github.io/riscos-pppm/>. Para usar offline, baixe o arquivo por [este link direto](https://raw.githubusercontent.com/Filipetb/riscos-pppm/main/docs/index.html) (clique com o botão direito → *Salvar link como…*) e dê duplo clique nele. Um arquivo só: sem build, sem servidor, sem conta.
 
