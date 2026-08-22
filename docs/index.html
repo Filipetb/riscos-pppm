@@ -280,7 +280,7 @@ T12,Caça à Oportunidade,Identificação de riscos positivos,oportunidade,"Onde
 (function () {
 'use strict';
 
-var APP_VERSAO = '1.3.0';
+var APP_VERSAO = '1.4.0';
 /* metodo/ não declara versão própria. O elo de Processamento da rastreabilidade
    pede "versão do método"; quem cumpre esse papel é a versão do app, que é o que
    fixa as regras aplicadas. O registro diz isso em vez de inventar um marcador
@@ -1563,6 +1563,24 @@ function rodarAutoteste() {
       checa('Respostas · pílula só para origem IA', [pilulaOrigemResposta('humano'), /resposta IA · ajustado/.test(pilulaOrigemResposta('ia-ajustado'))].join('|'), '|true');
 
       estado = guardado;
+    })();
+
+    /* --- Etapa 5: decisão sugerida pelas origens (porte de exportar.js) --- */
+    (function () {
+      var d = function (o, n, r) { var it = novoItemCru(); it.origem = o; it.origemNota = n; it.origemResposta = r; return decisaoSugerida(it); };
+      checa('Decisão · qualquer ia-ajustado → ajuste', [d('ia-ajustado', '', ''), d('humano', 'ia-aceito', 'ia-ajustado')].map(function (x) { return x.decisao; }).join(','), 'ajuste,ajuste');
+      checa('Decisão · só ia-aceito/humano → aceite', [d('ia-aceito', 'ia-aceito', ''), d('ia-aceito', 'humano', 'humano')].map(function (x) { return x.decisao; }).join(','), 'aceite,aceite');
+      checa('Decisão · só humano → aceite, com o motivo dizendo que não houve sugestão', [d('humano', 'humano', 'humano').decisao, /não houve sugestão da IA/.test(d('humano', 'humano', 'humano').motivo)].join('|'), 'aceite|true');
+      checa('Decisão · sem origem nenhuma → sem sugestão', d('', '', '').decisao, '');
+      checa('Decisão · o motivo nomeia os elos ajustados e os aceitos', d('ia-aceito', 'ia-ajustado', 'humano').motivo, 'a pessoa alterou a sugestão da IA em: nota (aceitou como veio: enunciado)');
+      var itD = novoItemCru(); itD.id = 'R011'; itD.origem = 'ia-ajustado';
+      checa('Decisão · cartão sem decisão mostra a sugestão e o botão de fixar', /Decisão sugerida pelas origens: ajuste[\s\S]*data-decisao-usar="R011"/.test(renderDecisaoSugerida(itD)), true);
+      itD.decisao = 'aceite';
+      checa('Decisão · decisão fixada divergente da sugestão recebe aviso, não bloqueio', /data-dec-divergente="R011"[\s\S]*Fica como você fixou/.test(renderDecisaoSugerida(itD)), true);
+      itD.decisao = 'ajuste';
+      checa('Decisão · decisão igual à sugestão só mostra as origens', /data-dec-/.test(renderDecisaoSugerida(itD)), false);
+      var itV = novoItemCru(); itV.id = 'R012';
+      checa('Decisão · item sem origem nenhuma não ganha botão', /data-decisao-usar/.test(renderDecisaoSugerida(itV)), false);
     })();
 
     /* --- Promoção do risco secundário: rastreável e idempotente ---------- */
@@ -3017,6 +3035,40 @@ function pilulaOrigemResposta(o) {
     (o === 'ia-aceito' ? 'usada sem alteração' : 'alterada pela pessoa') + ' — dono e confirmações são sempre humanos">resposta ' + esc(rotuloOrigem(o)) + '</span>';
 }
 
+/* ---------------------------------------------------------------------
+   7e. ETAPA 5 — decisão da validação humana "quase pronta". Porte literal de
+   decisaoSugerida() em .claude/skills/riscos/scripts/exportar.js: as origens
+   já dizem se a pessoa ajustou algo que a IA propôs. Não precisa de modelo —
+   é determinístico — e, como na skill, só SUGERE: a pessoa fixa.
+   --------------------------------------------------------------------- */
+function decisaoSugerida(it) {
+  var elos = [['enunciado', it.origem], ['nota', it.origemNota], ['resposta', it.origemResposta]]
+    .filter(function (e) { return !!e[1]; });
+  var ajustados = elos.filter(function (e) { return e[1] === 'ia-ajustado'; }).map(function (e) { return e[0]; });
+  var aceitos = elos.filter(function (e) { return e[1] === 'ia-aceito'; }).map(function (e) { return e[0]; });
+  var humanos = elos.filter(function (e) { return e[1] === 'humano'; }).map(function (e) { return e[0]; });
+  if (ajustados.length) return { decisao: 'ajuste', motivo: 'a pessoa alterou a sugestão da IA em: ' + ajustados.join(', ') + (aceitos.length ? ' (aceitou como veio: ' + aceitos.join(', ') + ')' : '') };
+  if (aceitos.length) return { decisao: 'aceite', motivo: 'a pessoa fixou a sugestão da IA sem alteração em: ' + aceitos.join(', ') + (humanos.length ? ' (sem sugestão em: ' + humanos.join(', ') + ')' : '') };
+  if (humanos.length) return { decisao: 'aceite', motivo: 'não houve sugestão da IA neste item (' + humanos.join(', ') + ' vieram da pessoa); a recomendação aprovada como está é a própria formulação humana' };
+  return { decisao: '', motivo: 'sem origem registrada — decida lendo o item' };
+}
+
+function renderDecisaoSugerida(it) {
+  var sug = decisaoSugerida(it);
+  var pilulas = pilulaOrigem(it.origem) + pilulaOrigemNota(it.origemNota) + pilulaOrigemResposta(it.origemResposta);
+  if (!it.decisao) {
+    if (!sug.decisao) return '<div class="nota"><p><small>Decisão ainda não fixada. ' + esc(sug.motivo) + '.</small></p></div>';
+    return '<div class="nota nota-acc" data-dec-sugerida="' + esc(it.id) + '"><p><b>Decisão sugerida pelas origens: ' + esc(sug.decisao) + '</b> — ' + esc(sug.motivo) + '. ' + pilulas +
+      '</p><div class="acoes"><button type="button" class="btn btn-mini" data-decisao-usar="' + esc(it.id) + '">Fixar “' + esc(sug.decisao) + '”</button>' +
+      '<small>Ou escolha no campo ao lado. A sugestão é leitura do que já está gravado; a decisão é sua.</small></div></div>';
+  }
+  if (sug.decisao && sug.decisao !== it.decisao) {
+    return '<div class="nota nota-aviso" data-dec-divergente="' + esc(it.id) + '"><p><small><b>Decisão fixada: ' + esc(it.decisao) + '</b>, mas as origens apontam <b>' + esc(sug.decisao) + '</b> (' + esc(sug.motivo) + '). ' +
+      'Fica como você fixou — só conferindo que é intencional. ' + pilulas + '</small></p></div>';
+  }
+  return pilulas ? '<p><small>Origens: ' + pilulas + '</small></p>' : '';
+}
+
 /* --- Etapa 2: Identificar --- */
 function renderEtapa2() {
   var pol = estado.abaIdentificar;
@@ -3724,6 +3776,7 @@ function renderFechamento() {
       '<div class="acoes"><button type="button" class="btn' + (pronto ? '' : ' btn-fantasma') +
       '" data-encerrar="' + esc(it.id) + '"' + (pronto ? '' : ' disabled') + '>' +
       (it.encerrado ? 'Reabrir item' : 'Encerrar item') + '</button></div></div></div>';
+    h += renderDecisaoSugerida(it);
     if (bloqueios.length) {
       /* o corte obrigatório só é nomeado no título quando é ele que está bloqueando */
       h += '<div class="nota nota-erro"><p><b>Encerramento bloqueado' +
@@ -4500,7 +4553,7 @@ function ligarEventos() {
   });
 
   painel.addEventListener('click', function (ev) {
-    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],[data-sug-aceitar],[data-sug-descartar],[data-nota-aplicar],[data-nota-descartar],#btn-prompt-notas-copiar,#btn-prompt-notas-ver,#btn-ler-notas,[data-resp-aplicar],[data-resp-descartar],#btn-prompt-resp-copiar,#btn-prompt-resp-ver,#btn-ler-respostas,#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md,#btn-prompt-copiar,#btn-prompt-ver,#btn-ler-sugestoes,#btn-sug-limpar') : null;
+    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],[data-sug-aceitar],[data-sug-descartar],[data-nota-aplicar],[data-nota-descartar],#btn-prompt-notas-copiar,#btn-prompt-notas-ver,#btn-ler-notas,[data-resp-aplicar],[data-resp-descartar],[data-decisao-usar],#btn-prompt-resp-copiar,#btn-prompt-resp-ver,#btn-ler-respostas,#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md,#btn-prompt-copiar,#btn-prompt-ver,#btn-ler-sugestoes,#btn-sug-limpar') : null;
     if (!t) return;
 
     /* --- modo assistido --- */
@@ -4610,6 +4663,12 @@ function ligarEventos() {
       var alvoSR = $('#status-respostas');
       if (alvoSR) alvoSR.innerHTML = '<small><b>' + conhecidasR.length + (conhecidasR.length > 1 ? ' sugestões lidas' : ' sugestão lida') + '.</b> Nenhuma resposta foi usada: veja cada item abaixo.' +
         (lidasR.length > conhecidasR.length ? ' IDs ignorados por não existirem: ' + esc(lidasR.filter(function (s) { return !itemPorId(s.id); }).map(function (s) { return s.id; }).join(', ')) + '.' : '') + '</small>';
+      return;
+    }
+    if (t.hasAttribute('data-decisao-usar')) {
+      var itD = itemPorId(t.getAttribute('data-decisao-usar'));
+      var sugD = itD ? decisaoSugerida(itD) : null;
+      if (itD && sugD && sugD.decisao) { itD.decisao = sugD.decisao; renderFechamento(); renderPrevia(); renderStatusExport(); salvar(); }
       return;
     }
     if (t.hasAttribute('data-resp-aplicar')) { aplicarSugestaoResposta(t.getAttribute('data-resp-aplicar')); render(); return; }
