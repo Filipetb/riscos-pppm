@@ -238,7 +238,9 @@ details[open]>summary{margin-bottom:.5rem}
         <li><b>A ferramenta não decide.</b> Organiza evidência e calcula de forma consistente. A assinatura é humana.</li>
         <li><b>A ferramenta não sabe do seu projeto.</b> Toda nota vem de quem preenche; ela não valida se a nota é honesta.</li>
         <li><b>A ferramenta não substitui</b> o plano de gerenciamento de riscos, nem a análise quantitativa, nem o monitoramento contínuo.</li>
-        <li><b>Nenhum dado sai da máquina.</b> Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.</li>
+        <li><b>Nenhum dado sai da máquina.</b> Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.
+          O <em>modo assistido</em> da Etapa 2 é copiar-e-colar: o prompt sai pela sua mão para o modelo que você escolher, e o que volta
+          só entra no registro quando você aceita, item a item, com a origem marcada.</li>
       </ul>
     </section>
     <p class="rodape-fim">
@@ -278,7 +280,7 @@ T12,Caça à Oportunidade,Identificação de riscos positivos,oportunidade,"Onde
 (function () {
 'use strict';
 
-var APP_VERSAO = '1.0.0';
+var APP_VERSAO = '1.1.0';
 /* metodo/ não declara versão própria. O elo de Processamento da rastreabilidade
    pede "versão do método"; quem cumpre esse papel é a versão do app, que é o que
    fixa as regras aplicadas. O registro diz isso em vez de inventar um marcador
@@ -1326,6 +1328,79 @@ function rodarAutoteste() {
       caixa.parentNode.removeChild(caixa);
     }
 
+    /* --- Modo assistido (Etapa 2): prompt do kernel, parser tolerante, ----
+       sugestão nunca é item, origem decidida pelo texto. */
+    (function () {
+      var guardado = estado;
+      estado = sessaoNova();
+      estado.enquadramento = { contexto: 'ERP go-live', dor: 'integrador único para carga', dados: 'cronograma', riscos: 'dados de RH', valor: 'entrar em produção' };
+      estado.tecnicaAtiva.ameaca = 'T01';
+      var t01 = tecnicaPorId('T01');
+      var p = promptAssistido('ameaca', t01);
+      checa('Assistido · prompt leva a pergunta de disparo literal do CSV', p.indexOf(t01.pergunta_disparo) !== -1, true);
+      checa('Assistido · prompt leva as 5 colunas do enquadramento',
+            COLUNAS_ENQUADRAMENTO.every(function (c) { return p.indexOf(estado.enquadramento[c.chave]) !== -1; }), true);
+      checa('Assistido · prompt proíbe nota, estratégia e dono', /NÃO sugira nota[\s\S]*NUNCA sugira nome de dono/.test(p), true);
+      checa('Assistido · prompt leva a tabela “não escorregar”',
+            NAO_ESCORREGAR.every(function (r) { return p.indexOf(r[0]) !== -1; }), true);
+      checa('Assistido · prompt pede o marcador do formato', p.indexOf(MARCADOR_RESPOSTA) !== -1, true);
+      var pOp = promptAssistido('oportunidade', t01);
+      checa('Assistido · T01 em oportunidade vira pré-mortem invertido', /sucesso muito além do esperado/.test(pOp), true);
+
+      var resposta = 'Claro! Seguem os candidatos:\n```\n' + MARCADOR_RESPOSTA + '\n' +
+        '### 1\ncausa: integrador único para a carga\nevento: indisponibilidade do integrador na virada\nefeito: adiamento do go-live\nvem de: Dor\n' +
+        '### 2\n- **Causa**: cronograma sem folga\n- **Evento** — marco de homologação desliza\n- **Efeito**: entrada em produção adiada\n- **Âncora**: supondo que não há buffer\n' +
+        '3) Devido a dados de RH na carga, pode ocorrer vazamento em ambiente de teste, o que levaria a incidente LGPD.\n```\nQuer que eu detalhe?';
+      var lidas = lerSugestoes(resposta, 'ameaca', 'T01');
+      checa('Assistido · parser lê três formatos (rotulado, markdown com negrito/travessão, frase inteira)', lidas.length, 3);
+      checa('Assistido · parser ignora o texto antes e depois da cerca',
+            lidas.every(function (s) { return !/Claro|detalhe/.test(s.causa + s.evento + s.efeito); }), true);
+      checa('Assistido · campos do 1º candidato', [lidas[0].causa, lidas[0].evento, lidas[0].efeito, lidas[0].ancora].join('|'),
+            'integrador único para a carga|indisponibilidade do integrador na virada|adiamento do go-live|Dor');
+      checa('Assistido · negrito e travessão não vazam para o campo', [lidas[1].causa, lidas[1].evento].join('|'),
+            'cronograma sem folga|marco de homologação desliza');
+      checa('Assistido · âncora “supondo que” é preservada', lidas[1].ancora, 'supondo que não há buffer');
+      checa('Assistido · frase inteira vira três campos', [lidas[2].causa, lidas[2].evento, lidas[2].efeito].join('|'),
+            'dados de RH na carga|vazamento em ambiente de teste|incidente LGPD');
+      checa('Assistido · sugestão herda polaridade e técnica da aba', [lidas[2].polaridade, lidas[2].tecnica].join('|'), 'ameaca|T01');
+      checa('Assistido · texto vazio não produz sugestão', lerSugestoes('', 'ameaca', 'T01').length, 0);
+      checa('Assistido · texto sem os campos não produz sugestão', lerSugestoes('Aqui vão alguns riscos genéricos.', 'ameaca', 'T01').length, 0);
+
+      estado.sugestoes = lidas;
+      checa('Assistido · sugestão lida não é item nem consome ID', [estado.itens.length, estado.seq].join('|'), '0|0');
+      var aceitoIgual = aceitarSugestao(0);
+      checa('Assistido · aceitar sem mudar → item com origem ia-aceito', [aceitoIgual.id, aceitoIgual.origem, aceitoIgual.causa].join('|'),
+            'R001|ia-aceito|integrador único para a carga');
+      estado.sugestoes[0].evento = 'marco de homologação desliza duas semanas';
+      var aceitoMudado = aceitarSugestao(0);
+      checa('Assistido · aceitar depois de editar → origem ia-ajustado', [aceitoMudado.id, aceitoMudado.origem].join('|'), 'R002|ia-ajustado');
+      descartarSugestao(0);
+      checa('Assistido · descartar não consome ID nem cria item', [estado.itens.length, estado.seq, estado.sugestoes.length].join('|'), '2|2|0');
+      checa('Assistido · aceitar índice inexistente não faz nada', aceitarSugestao(7), null);
+
+      estado.novo = { tecnica: 'T01', causa: 'c', evento: 'e', efeito: 'f' };
+      var renderReal = render, lojaAntes = lojaDeTeste;
+      render = function () {};           /* adicionarItem remonta o painel; aqui só interessa o item */
+      lojaDeTeste = lojaEmMemoria();     /* e nada do estado de teste pode ir para o storage real */
+      try { adicionarItem(); } finally { render = renderReal; lojaDeTeste = lojaAntes; }
+      checa('Assistido · item digitado no formulário nasce com origem humano', estado.itens[2].origem, 'humano');
+
+      var salvo = desserializarSessao(serializarSessao({ itens: [{ id: 'R001', origem: 'robô' }, { id: 'R002', origem: 'ia-ajustado' }],
+                                                          sugestoes: [{ causa: 'x', polaridade: 'zzz' }, 'lixo', { causa: '', evento: '', efeito: '' }] }));
+      checa('Assistido · origem fora do domínio volta ao vazio; válida é preservada',
+            salvo.itens.map(function (it) { return it.origem; }).join(','), ',ia-ajustado');
+      checa('Assistido · sugestões sobrevivem ao recarregar; lixo e vazias caem; polaridade inválida vira ameaca',
+            [salvo.sugestoes.length, salvo.sugestoes[0].polaridade].join('|'), '1|ameaca');
+
+      var itIA = novoItemCru(); itIA.id = 'R009'; itIA.origem = 'ia-ajustado';
+      checa('Assistido · elo de validação declara a origem IA', /Origem do enunciado: ia-ajustado/.test(eloValidacao(itIA)), true);
+      var itH = novoItemCru(); itH.id = 'R010'; itH.origem = 'humano';
+      checa('Assistido · elo de validação não muda para item humano', /Origem do enunciado/.test(eloValidacao(itH)), false);
+      checa('Assistido · pílula só aparece para origem IA', [pilulaOrigem('humano'), pilulaOrigem(''), /IA · aceito/.test(pilulaOrigem('ia-aceito'))].join('|'), '||true');
+
+      estado = guardado;
+    })();
+
     /* --- Promoção do risco secundário: rastreável e idempotente ---------- */
     var origemP = itemDeTeste('R020', 'Ana Ribeiro');
     origemP.riscoSecundario = 'conflito de responsabilidade entre integradores';
@@ -1579,6 +1654,7 @@ function novoItemCru() {
   return {
     id: '', polaridade: 'ameaca', tecnica: '',
     causa: '', evento: '', efeito: '',
+    origem: '',   /* '' (sessão antiga) · humano · ia-aceito · ia-ajustado */
     probabilidade: null, impPrazo: null, impCusto: null, impEscopo: null,
     qualidade: '',
     estrategia: '', acao: '', dono: '', gatilho: '', residual: '',
@@ -1601,6 +1677,7 @@ function sessaoNova() {
     soEsforcoBaixo: true,
     tecnicaAtiva: { ameaca: '', oportunidade: '' },
     novo: { tecnica: '', causa: '', evento: '', efeito: '' },
+    sugestoes: [],   /* modo assistido: candidatos colados, ainda sem ID — não são itens */
     abaResponder: 'respostas',
     itens: [], seq: 0
   };
@@ -1657,6 +1734,7 @@ function sanearItem(bruto) {
   ['probabilidade', 'impPrazo', 'impCusto', 'impEscopo',
    'bImpacto', 'bViabilidade', 'bDados', 'bSeguranca', 'bValor'].forEach(function (k) { it[k] = notaOuNulo(it[k]); });
   it.qualidade = noDominio(it.qualidade, ['', 'alta', 'media', 'baixa'], '');
+  it.origem = noDominio(it.origem, ORIGENS, '');
   it.decisao = noDominio(it.decisao, ['', 'aceite', 'ajuste'], '');
   it.riscoSecundarioFaixa = noDominio(it.riscoSecundarioFaixa, ['', 'baixo', 'medio', 'alto'], '');
   it.dadoSensivel = it.dadoSensivel === true;
@@ -1686,6 +1764,7 @@ function desserializarSessao(bruto) {
   COLUNAS_ENQUADRAMENTO.forEach(function (c) { base.enquadramento[c.chave] = textoOuVazio(base.enquadramento[c.chave]); });
   if (!base.tecnicaAtiva || typeof base.tecnicaAtiva !== 'object') base.tecnicaAtiva = { ameaca: '', oportunidade: '' };
   if (!base.novo || typeof base.novo !== 'object') base.novo = { tecnica: '', causa: '', evento: '', efeito: '' };
+  base.sugestoes = Array.isArray(base.sugestoes) ? base.sugestoes.map(sanearSugestao).filter(Boolean) : [];
   base.conduzidaPor = textoOuVazio(base.conduzidaPor);
   base.etapa = (typeof base.etapa === 'number' && isFinite(base.etapa) &&
                 base.etapa >= 1 && base.etapa <= 5) ? Math.round(base.etapa) : 1;
@@ -2002,6 +2081,236 @@ function renderEnqStatus() {
   if (btn) btn.disabled = faltando.length > 0;
 }
 
+/* =====================================================================
+   7b. MODO ASSISTIDO (Etapa 2) — copiar prompt, colar resposta, aceitar um a um
+   ---------------------------------------------------------------------
+   É a projeção, para a superfície web, da seção 4 de
+   .claude/skills/riscos/references/etapa-2-identificar.md ("Propondo
+   candidatos"). A página continua sem rede: o prompt sai pela mão da pessoa
+   para o modelo que ela escolher, a resposta volta colada, e NADA vira item
+   antes de ela aceitar. Sugestão não tem ID; item aceito sem mudar nasce com
+   origem `ia-aceito`, alterado nasce `ia-ajustado` — igual à skill.
+   ===================================================================== */
+var ORIGENS = ['', 'humano', 'ia-aceito', 'ia-ajustado'];
+var MARCADOR_RESPOSTA = 'RISCOS-PPPM/sugestoes/v1';
+
+function sanearSugestao(bruto) {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  var s = {
+    polaridade: noDominio(bruto.polaridade, ['ameaca', 'oportunidade'], 'ameaca'),
+    tecnica: textoOuVazio(bruto.tecnica),
+    causa: textoOuVazio(bruto.causa), evento: textoOuVazio(bruto.evento), efeito: textoOuVazio(bruto.efeito),
+    ancora: textoOuVazio(bruto.ancora),
+    /* o que veio do modelo, intocado — é contra isto que se decide aceito × ajustado */
+    causa0: textoOuVazio(bruto.causa0), evento0: textoOuVazio(bruto.evento0), efeito0: textoOuVazio(bruto.efeito0)
+  };
+  if (!txt(s.causa) && !txt(s.evento) && !txt(s.efeito)) return null;
+  return s;
+}
+
+function origemDaSugestao(s) {
+  var igual = txt(s.causa) === txt(s.causa0) && txt(s.evento) === txt(s.evento0) && txt(s.efeito) === txt(s.efeito0);
+  return igual ? 'ia-aceito' : 'ia-ajustado';
+}
+
+function rotuloOrigem(o) {
+  return o === 'ia-aceito' ? 'IA · aceito' : o === 'ia-ajustado' ? 'IA · ajustado' : o === 'humano' ? 'humano' : '';
+}
+function pilulaOrigem(o) {
+  if (!o || o === 'humano') return '';
+  return '<span class="pilula pilula-acc" title="Sugerido por um modelo de IA fora da página e ' +
+    (o === 'ia-aceito' ? 'aceito sem alteração' : 'alterado antes de aceitar') + '">' + esc(rotuloOrigem(o)) + '</span>';
+}
+
+/* O prompt é montado do kernel e do estado, não de texto solto: pergunta de
+   disparo literal do CSV, as 5 colunas do enquadramento, a tabela "não
+   escorregar", os itens já registrados (para não repetir) e as proibições da
+   skill (nada de nota, estratégia ou dono — cada uma tem a sua etapa). */
+function promptAssistido(pol, tec) {
+  var ehOp = pol === 'oportunidade';
+  var l = [];
+  l.push('Você vai me ajudar numa sessão de identificação de riscos de projeto (método PPPM/BSBr + PMBOK, processo Identificar os Riscos). ' +
+    'Eu conduzo; você propõe candidatos e eu decido o que entra. Responda em português do Brasil.');
+  l.push('');
+  l.push('## Enquadramento (mapa inicial de oportunidades)');
+  COLUNAS_ENQUADRAMENTO.forEach(function (c) {
+    l.push('- ' + c.titulo + ' — ' + c.pergunta + ' ' + (txt(estado.enquadramento[c.chave]) || '(não informado)'));
+  });
+  l.push('');
+  l.push('## Lente desta rodada');
+  l.push('Polaridade: ' + (ehOp ? 'OPORTUNIDADES (riscos positivos — eventos incertos que ajudariam o objetivo)' : 'AMEAÇAS (riscos negativos)') + '.');
+  if (tec) {
+    l.push('Técnica: ' + tec.id + ' ' + tec.tecnica + ' (' + tec.origem_pmbok + '). Padrão de saída: ' + tec.padrao_saida + '.');
+    l.push('Pergunta de disparo, literal: "' + tec.pergunta_disparo + '"');
+    if (ehOp && tec.id === 'T01') {
+      l.push('Para oportunidades ela vira pré-mortem invertido: "Estamos 6 meses à frente e o projeto foi um sucesso muito além do esperado. Escreva a manchete. O que deu certo?"');
+    }
+  } else {
+    l.push('Técnica: nenhuma escolhida — use a pergunta "O que pode dar ' + (ehOp ? 'certo além do esperado' : 'errado') + ' neste projeto?"');
+  }
+  l.push('');
+  var registrados = estado.itens.filter(function (it) { return it.polaridade === pol; });
+  l.push('## Já registrado nesta polaridade (não repita com outras palavras)');
+  if (!registrados.length) l.push('(nada ainda)');
+  registrados.forEach(function (it) { l.push('- ' + it.id + ': ' + enunciadoDe(it)); });
+  l.push('');
+  l.push('## Regras');
+  l.push('1. Proponha de 5 a 8 candidatos, cada um ANCORADO em algo do enquadramento acima. Diga de onde vem ("vem de: …", citando a coluna). ' +
+    'Se depender de algo que não foi dito, escreva "supondo que …" explícito. Se não dá para ancorar nem supor com honestidade, não proponha.');
+  l.push('2. Você não conhece o projeto: não invente fato, nome de pessoa, número, prazo ou contrato.');
+  l.push('3. Formato obrigatório do enunciado, em três campos separados: CAUSA (um fato conhecido) · EVENTO (incerto) · EFEITO (no objetivo). ' +
+    'Lido junto fica: "Devido a ⟨causa⟩, pode ocorrer ⟨evento⟩, o que levaria a ⟨efeito⟩".');
+  l.push('4. Como não escorregar: ' + NAO_ESCORREGAR.map(function (r) { return r[0] + ' — ' + r[1]; }).join(' ') );
+  l.push('5. A técnica é a lente: um candidato de Pré-mortem é um cenário de fracasso; um de Premissas é uma suposição não verificada; um de Cascata é um efeito de segunda ordem.');
+  l.push('6. NÃO sugira nota de probabilidade ou impacto, NÃO sugira estratégia de resposta e NUNCA sugira nome de dono — cada coisa tem a sua etapa e a última é assinatura humana. ' +
+    'Não classifique nada como "alto" ou "crítico".');
+  l.push('7. Responda SOMENTE no formato abaixo, sem texto antes ou depois. Eu vou colar a sua resposta numa ferramenta que lê exatamente isto.');
+  l.push('');
+  l.push('## Formato da resposta');
+  l.push('```');
+  l.push(MARCADOR_RESPOSTA);
+  l.push('### 1');
+  l.push('causa: <um fato conhecido>');
+  l.push('evento: <o que pode ocorrer>');
+  l.push('efeito: <o que isso causaria no objetivo>');
+  l.push('vem de: <coluna do enquadramento ou "supondo que …">');
+  l.push('### 2');
+  l.push('causa: …');
+  l.push('evento: …');
+  l.push('efeito: …');
+  l.push('vem de: …');
+  l.push('```');
+  return l.join('\n');
+}
+
+/* Lê a resposta colada. Tolerante ao que modelos fazem de diferente: cerca de
+   código presente ou não, "###" ou "1." ou "1)" como cabeçalho, rótulos com ou
+   sem acento, maiúsculas, dois-pontos ou travessão; e, como último recurso, a
+   frase inteira "Devido a X, pode ocorrer Y, o que levaria a Z" numa linha só. */
+function lerSugestoes(texto, pol, tecId) {
+  var linhas = String(texto == null ? '' : texto).replace(/\r\n?/g, '\n').split('\n');
+  var blocos = [], atual = null;
+  var reCab = /^\s*(?:#{1,6}\s*)?(?:candidato|sugest[aã]o|item)?\s*\(?(\d{1,2})[.)\]:]?\s*(?:[-–—:]\s*.*)?$/i;
+  var reCampo = /^\s*[-*•]?\s*\**(causa|evento|efeito|vem de|[aâ]ncora(?:gem)?|origem|supondo que)\**\s*[:：\-–—]\s*(.+?)\s*$/i;
+  var reFrase = /devido\s+a\s+(.+?),\s*pode\s+ocorrer\s+(.+?),\s*o\s+que\s+levaria\s+a\s+(.+?)\.?\s*$/i;
+
+  function fechar() { if (atual && (txt(atual.causa) || txt(atual.evento) || txt(atual.efeito))) blocos.push(atual); atual = null; }
+  function novo() { return { causa: '', evento: '', efeito: '', ancora: '' }; }
+
+  linhas.forEach(function (linha) {
+    var s = linha.replace(/^\s*```.*$/, '').replace(/^\s*`+\s*$/, '');
+    if (!txt(s)) return;
+    if (txt(s) === MARCADOR_RESPOSTA) return;
+    var m = reCampo.exec(s);
+    if (m) {
+      if (!atual) atual = novo();
+      var k = m[1].toLowerCase().replace(/[âã]/g, function (c) { return c === 'â' ? 'a' : 'a'; });
+      var v = m[2].replace(/^\**|\**$/g, '').replace(/^[<⟨]|[>⟩]$/g, '').trim();
+      if (k === 'causa') { if (txt(atual.causa)) { fechar(); atual = novo(); } atual.causa = v; }
+      else if (k === 'evento') { if (txt(atual.evento)) { fechar(); atual = novo(); } atual.evento = v; }
+      else if (k === 'efeito') { if (txt(atual.efeito)) { fechar(); atual = novo(); } atual.efeito = v; }
+      else if (k === 'supondo que') atual.ancora = (atual.ancora ? atual.ancora + ' · ' : '') + 'supondo que ' + v;
+      else atual.ancora = (atual.ancora ? atual.ancora + ' · ' : '') + v;
+      return;
+    }
+    if (reCab.test(s)) { fechar(); atual = novo(); return; }
+    var f = reFrase.exec(s);
+    if (f) {
+      fechar(); atual = novo();
+      atual.causa = f[1].trim(); atual.evento = f[2].trim(); atual.efeito = f[3].trim();
+      fechar();
+      return;
+    }
+    /* linha solta dentro de um bloco: continuação do último campo preenchido */
+    if (atual) {
+      var ult = txt(atual.efeito) ? 'efeito' : txt(atual.evento) ? 'evento' : txt(atual.causa) ? 'causa' : '';
+      if (ult && !/^#{1,6}\s/.test(s)) atual[ult] = atual[ult] + ' ' + txt(s);
+    }
+  });
+  fechar();
+
+  return blocos.map(function (b) {
+    return sanearSugestao({
+      polaridade: pol, tecnica: tecId || '',
+      causa: b.causa, evento: b.evento, efeito: b.efeito, ancora: b.ancora,
+      causa0: b.causa, evento0: b.evento, efeito0: b.efeito
+    });
+  }).filter(Boolean);
+}
+
+/* Aceitar é o único caminho de sugestão para item: um por vez, com ID novo, e
+   a origem decidida pelo texto que a pessoa deixou — não pelo que ela disse. */
+function aceitarSugestao(indice) {
+  var s = estado.sugestoes[indice];
+  if (!s) return null;
+  var it = novoItemCru();
+  it.id = proximoId();
+  it.polaridade = s.polaridade;
+  it.tecnica = s.tecnica || '';
+  it.causa = s.causa; it.evento = s.evento; it.efeito = s.efeito;
+  it.origem = origemDaSugestao(s);
+  estado.itens.push(it);
+  estado.sugestoes.splice(indice, 1);
+  return it;
+}
+function descartarSugestao(indice) {
+  if (!estado.sugestoes[indice]) return;
+  estado.sugestoes.splice(indice, 1);   /* descartada não consome ID e não é registrada */
+}
+
+var respostaAssistente = '';   /* texto colado, só em memória: o que vale fica em estado.sugestoes */
+
+function renderAssistido(pol, tec) {
+  var h = '<div class="bloco bloco-quieto" id="bloco-assistido">';
+  h += '<h3>Modo assistido <span class="pilula pilula-neutra">opcional · copiar e colar</span></h3>';
+  h += '<p><small>A página continua sem rede. Você leva o prompt ao modelo de IA da sua escolha, cola a resposta aqui, ' +
+    'e cada candidato entra no registro <b>só quando você aceitar</b> — sem ID antes disso, sem aceite em bloco. ' +
+    'O que você copiar sai da máquina pela sua mão; avalie o sigilo do enquadramento antes de colar em serviço externo.</small></p>';
+
+  if (!tec) {
+    h += '<div class="nota nota-aviso"><p>Escolha uma técnica no catálogo acima: o prompt leva a <b>pergunta de disparo literal</b> dela.</p></div>';
+  }
+  h += '<div class="acoes">' +
+    '<button type="button" class="btn' + (tec ? '' : ' btn-fantasma') + '" id="btn-prompt-copiar">Copiar prompt' + (tec ? ' (' + esc(tec.id) + ')' : '') + '</button>' +
+    '<button type="button" class="btn btn-fantasma" id="btn-prompt-ver" aria-expanded="false" aria-controls="prompt-assistido">Ver prompt</button>' +
+    '<span id="status-prompt" aria-live="polite"></span></div>';
+  h += '<textarea id="prompt-assistido" rows="14" readonly hidden aria-label="Prompt para o modelo de IA"></textarea>';
+
+  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-assistente">Cole a resposta do modelo</label>' +
+    '<textarea id="resposta-assistente" rows="6" placeholder="' + esc(MARCADOR_RESPOSTA) + '\n### 1\ncausa: …\nevento: …\nefeito: …\nvem de: …"></textarea></div>';
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-sugestoes">Ler sugestões</button>' +
+    '<span id="status-sugestoes" aria-live="polite"></span></div>';
+
+  var lista = estado.sugestoes.map(function (s, i) { return { s: s, i: i }; })
+    .filter(function (x) { return x.s.polaridade === pol; });
+  if (lista.length) {
+    h += '<h3 style="margin-top:1.2rem">Sugestões aguardando decisão <span class="pilula pilula-aviso">' + lista.length + '</span></h3>';
+    h += '<p><small>Leia uma a uma. Edite o que quiser antes de aceitar — o registro marca se entrou como veio (<b>IA · aceito</b>) ou alterado (<b>IA · ajustado</b>).</small></p>';
+    lista.forEach(function (x) {
+      var s = x.s, i = x.i, tecS = tecnicaPorId(s.tecnica);
+      var campo = function (rotulo, chave) {
+        var id = 'sug-' + chave + '-' + i;
+        return '<div class="campo"><label for="' + id + '">' + rotulo + '</label>' +
+          '<textarea id="' + id + '" rows="2" data-sug="' + i + '" data-sug-campo="' + chave + '">' + esc(s[chave]) + '</textarea></div>';
+      };
+      h += '<div class="item rascunho" data-sugestao="' + i + '">' +
+        '<div class="item-topo"><span class="item-id">sugestão ' + (i + 1) + '</span>' +
+        pilulaPolaridade(s.polaridade) +
+        '<span class="pilula pilula-neutra">sem ID</span>' +
+        (tecS ? '<span class="pilula pilula-neutra">' + esc(tecS.id) + ' ' + esc(tecS.tecnica) + '</span>' : '') +
+        '</div>' +
+        (s.ancora ? '<p class="enunciado"><small><b>Vem de:</b> ' + esc(s.ancora) + '</small></p>' : '') +
+        '<div class="linha-campos">' + campo('Causa', 'causa') + campo('Evento incerto', 'evento') + campo('Efeito no objetivo', 'efeito') + '</div>' +
+        '<div class="acoes"><button type="button" class="btn btn-mini" data-sug-aceitar="' + i + '">Aceitar → vira item</button>' +
+        '<button type="button" class="btn btn-fantasma btn-mini" data-sug-descartar="' + i + '">Descartar</button></div>' +
+        '</div>';
+    });
+    h += '<div class="acoes"><button type="button" class="btn btn-fantasma btn-mini" id="btn-sug-limpar">Descartar todas as sugestões desta aba</button></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
 /* --- Etapa 2: Identificar --- */
 function renderEtapa2() {
   var pol = estado.abaIdentificar;
@@ -2097,6 +2406,8 @@ function renderEtapa2() {
     '</ul></details>';
   h += '</div>';
 
+  h += renderAssistido(pol, tec);
+
   /* itens já registrados */
   h += '<div class="bloco"><h3>Itens registrados <span class="pilula pilula-neutra">' + estado.itens.length + '</span></h3>';
   if (!estado.itens.length) {
@@ -2124,6 +2435,7 @@ function cartaoItemSimples(it) {
   return '<div class="item" data-cartao-i2="' + esc(it.id) + '">' +
     '<div class="item-topo"><span class="item-id">' + esc(it.id) + '</span>' +
     pilulaPolaridade(it.polaridade) +
+    pilulaOrigem(it.origem) +
     '<span data-pilula-i2="' + esc(it.id) + '"></span>' +
     (tec ? '<span class="pilula pilula-neutra">' + esc(tec.id) + ' ' + esc(tec.tecnica) + '</span>' : '') +
     '<span class="acoes-fim"><button type="button" class="btn btn-fantasma btn-mini" data-remover="' + esc(it.id) + '">Remover</button></span>' +
@@ -2839,7 +3151,11 @@ function eloValidacao(it) {
     ' | Gatilhos HITL: ' + (gats.length ? gats.map(function (g) {
         return g.id + (it.confirmacoes[g.id] ? ' confirmado ' + dataBR(it.confirmacoes[g.id]) : ' NÃO CONFIRMADO');
       }).join(' / ') : 'nenhum') +
-    ' | Fluxo: ' + NOTA_COLAPSO;
+    ' | Fluxo: ' + NOTA_COLAPSO +
+    (it.origem === 'ia-aceito' || it.origem === 'ia-ajustado'
+      ? ' | Origem do enunciado: ' + it.origem + ' (sugerido por modelo de IA fora da página, no modo assistido; ' +
+        (it.origem === 'ia-aceito' ? 'aceito sem alteração' : 'alterado antes de aceitar') + ' pela pessoa)'
+      : '');
 }
 function eloRegistro(it) {
   return 'Linha exportada em ' + dataBR(new Date().toISOString()) +
@@ -2988,6 +3304,13 @@ function gerarMarkdown() {
   l.push('');
   l.push('> ⚠️ ' + NOTA_COLAPSO);
   l.push('');
+  var vindosDeIA = estado.itens.filter(function (it) { return it.origem === 'ia-aceito' || it.origem === 'ia-ajustado'; });
+  if (vindosDeIA.length) {
+    l.push('> 🤖 **Modo assistido (Etapa 2):** ' + vindosDeIA.map(function (it) { return it.id + ' (' + it.origem + ')'; }).join(', ') +
+      ' vieram de sugestões de um modelo de IA usado fora da página e aceitas pela pessoa — `ia-aceito` = sem alteração · `ia-ajustado` = alterado antes de aceitar. ' +
+      'A IA ocupou o passo 1 do fluxo de validação; nada entrou sem decisão humana.');
+    l.push('');
+  }
 
   function tabelaMD(lista) {
     var out = [];
@@ -3204,6 +3527,33 @@ function relatarCopia(copiou, nome) {
       '<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd> e salve como <code>' + esc(nome) + '</code>.';
 }
 
+/* Cópia genérica com o mesmo par de caminhos de copiarConteudo (clipboard API em
+   contexto seguro; seleção + execCommand em file://), mas sem a área de texto da
+   Etapa 5: recebe a textarea de reserva e avisa o chamador do resultado. */
+function copiarTexto(conteudo, textareaReserva, aoTerminar) {
+  function porSelecao() {
+    if (!textareaReserva) return false;
+    var estavaOculta = textareaReserva.hidden;
+    try {
+      textareaReserva.hidden = false;
+      textareaReserva.value = conteudo;
+      textareaReserva.focus(); textareaReserva.select();
+      if (textareaReserva.setSelectionRange) textareaReserva.setSelectionRange(0, conteudo.length);
+      var ok = document.execCommand('copy') === true;
+      textareaReserva.hidden = estavaOculta;
+      return ok;
+    } catch (e) { textareaReserva.hidden = estavaOculta; return false; }
+  }
+  var api = window.navigator && window.navigator.clipboard;
+  if (api && api.writeText) {
+    try {
+      api.writeText(conteudo).then(function () { aoTerminar(true); }, function () { aoTerminar(porSelecao()); });
+      return;
+    } catch (e) { /* cai para a seleção */ }
+  }
+  aoTerminar(porSelecao());
+}
+
 function copiarConteudo(conteudo, nome) {
   mostrarAreaDeTexto('<b>Preparando cópia…</b>', '', conteudo, nome);
   /* navigator.clipboard exige contexto seguro e não existe em file://, que é
@@ -3233,6 +3583,8 @@ function render() {
   else if (estado.etapa === 3) painel.innerHTML = renderEtapa3();
   else if (estado.etapa === 4) painel.innerHTML = renderEtapa4();
   else painel.innerHTML = renderEtapa5();
+  var taResposta = $('#resposta-assistente');
+  if (taResposta && respostaAssistente) taResposta.value = respostaAssistente;
   atualizarDerivados();
   salvar();   /* salvar() ignora sessão virgem: abrir a página não cria registro */
 }
@@ -3314,6 +3666,7 @@ function adicionarItem() {
   it.causa = estado.novo.causa;
   it.evento = estado.novo.evento;
   it.efeito = estado.novo.efeito;
+  it.origem = 'humano';
   estado.itens.push(it);
   estado.novo = { tecnica: it.tecnica, causa: '', evento: '', efeito: '' };
   render();
@@ -3351,6 +3704,7 @@ function criarItemDeRiscoSecundario(origem, novoId) {
       (origem.estrategia ? ' (estratégia ' + origem.estrategia + ', ação ainda não descrita)' : ' (ação ainda não descrita)');
   novo.evento = txt(origem.riscoSecundario);
   novo.efeito = '';
+  novo.origem = 'humano';   /* o texto do risco secundário foi a pessoa quem escreveu */
   /* Rastreabilidade nos dois sentidos: sem isso o mesmo risco aparece duas vezes
      no registro, em duas formas, sem nada dizendo que são o mesmo. */
   novo.origemRiscoSecundario = origem.id;
@@ -3375,6 +3729,12 @@ function ligarEventos() {
       estado.novo[t.getAttribute('data-novo')] = t.value;
       renderNovoStatus(); salvar(); return;
     }
+    if (t.hasAttribute && t.hasAttribute('data-sug')) {
+      var sg = estado.sugestoes[parseInt(t.getAttribute('data-sug'), 10)];
+      if (sg) { sg[t.getAttribute('data-sug-campo')] = t.value; salvar(); }
+      return;
+    }
+    if (t.id === 'resposta-assistente') { respostaAssistente = t.value; return; }
     if (t.hasAttribute && t.hasAttribute('data-item') && t.hasAttribute('data-campo')) {
       aplicarCampo(t); return;
     }
@@ -3403,8 +3763,56 @@ function ligarEventos() {
   });
 
   painel.addEventListener('click', function (ev) {
-    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md') : null;
+    var t = ev.target.closest ? ev.target.closest('[data-ir],[data-aba-id],[data-aba4],[data-usar-tecnica],[data-remover],[data-encerrar],[data-promover],[data-rolar-limites],[data-sug-aceitar],[data-sug-descartar],#btn-adicionar,#btn-csv,#btn-md,#btn-copiar-csv,#btn-copiar-md,#btn-prompt-copiar,#btn-prompt-ver,#btn-ler-sugestoes,#btn-sug-limpar') : null;
     if (!t) return;
+
+    /* --- modo assistido --- */
+    if (t.id === 'btn-prompt-copiar' || t.id === 'btn-prompt-ver') {
+      var polA = estado.abaIdentificar, tecA = tecnicaPorId(estado.tecnicaAtiva[polA]);
+      var promptA = promptAssistido(polA, tecA);
+      var taP = $('#prompt-assistido'), stP = $('#status-prompt'), btnVer = $('#btn-prompt-ver');
+      if (taP) taP.value = promptA;
+      if (t.id === 'btn-prompt-ver') {
+        var aberto = taP && !taP.hidden;
+        if (taP) taP.hidden = aberto;
+        if (btnVer) { btnVer.textContent = aberto ? 'Ver prompt' : 'Esconder prompt'; btnVer.setAttribute('aria-expanded', String(!aberto)); }
+        return;
+      }
+      copiarTexto(promptA, taP, function (ok) {
+        if (!stP) return;
+        stP.innerHTML = ok
+          ? '<small><b>Prompt copiado.</b> Cole no seu modelo de IA e traga a resposta para o campo abaixo.</small>'
+          : '<small><b>Não deu para copiar automaticamente.</b> O prompt está aberto abaixo: selecione e copie.</small>';
+        if (!ok && taP) { taP.hidden = false; if (btnVer) btnVer.textContent = 'Esconder prompt'; try { taP.focus(); taP.select(); } catch (e) { /* ignorado */ } }
+      });
+      return;
+    }
+    if (t.id === 'btn-ler-sugestoes') {
+      var taR = $('#resposta-assistente'), stS = $('#status-sugestoes');
+      var texto = taR ? taR.value : respostaAssistente;
+      var polL = estado.abaIdentificar;
+      var lidas = lerSugestoes(texto, polL, estado.tecnicaAtiva[polL] || '');
+      if (!lidas.length) {
+        if (stS) stS.innerHTML = '<small class="nota-erro"><b>Nenhuma sugestão reconhecida.</b> O texto precisa ter linhas <code>causa:</code>, <code>evento:</code> e <code>efeito:</code> por candidato (ou a frase “Devido a …, pode ocorrer …, o que levaria a …”).</small>';
+        return;
+      }
+      estado.sugestoes = estado.sugestoes.concat(lidas);
+      respostaAssistente = '';
+      render();
+      var alvoS = $('#status-sugestoes');
+      if (alvoS) alvoS.innerHTML = '<small><b>' + lidas.length + (lidas.length > 1 ? ' sugestões lidas' : ' sugestão lida') + '.</b> Nenhuma é item ainda: decida uma a uma abaixo.</small>';
+      return;
+    }
+    if (t.hasAttribute('data-sug-aceitar')) { aceitarSugestao(parseInt(t.getAttribute('data-sug-aceitar'), 10)); render(); return; }
+    if (t.hasAttribute('data-sug-descartar')) { descartarSugestao(parseInt(t.getAttribute('data-sug-descartar'), 10)); render(); return; }
+    if (t.id === 'btn-sug-limpar') {
+      var polX = estado.abaIdentificar;
+      if (window.confirm('Descartar todas as sugestões desta aba? Nenhuma virou item; nada é removido do registro.')) {
+        estado.sugestoes = estado.sugestoes.filter(function (s) { return s.polaridade !== polX; });
+        render();
+      }
+      return;
+    }
 
     if (t.hasAttribute('data-ir')) { ev.preventDefault(); irPara(parseInt(t.getAttribute('data-ir'), 10)); return; }
     if (t.hasAttribute('data-aba-id')) { estado.abaIdentificar = t.getAttribute('data-aba-id'); render(); return; }

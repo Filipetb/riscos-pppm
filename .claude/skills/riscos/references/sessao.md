@@ -52,7 +52,7 @@ Campos e valores espelham `sessaoNova()` e `novoItemCru()` do app. Todos os camp
 Regras:
 
 - **IDs** são `R` + número com três dígitos, sequenciais a partir de `seq` (`R001`, `R002`…). Nunca reutilize nem renumere; item descartado pelo usuário não consome ID porque não chegou a entrar.
-- `origem` ∈ `humano` · `ia-aceito` · `ia-ajustado`. É campo da skill (o app não o tem); fica no item para que o `elo_validacao` do registro final possa dizer se o humano aceitou ou ajustou a sugestão.
+- `origem` ∈ `humano` · `ia-aceito` · `ia-ajustado`. Campo compartilhado com o app desde a versão 1.1.0 (o modo assistido da Etapa 2 grava os mesmos valores; itens digitados no formulário nascem `humano`); fica no item para que o `elo_validacao` do registro final possa dizer se o humano aceitou ou ajustou a sugestão.
 - `polaridade` ∈ `ameaca` · `oportunidade`. `tecnica` é o `id` do CSV (`T01`…), não o nome.
 - `postura` ∈ `parceira` · `perguntas`.
 - `etapa` é a última etapa concluída ou em curso (1 a 5).
