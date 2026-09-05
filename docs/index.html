@@ -217,7 +217,7 @@ details[open]>summary{margin-bottom:.5rem}
     <div class="topo-linha">
       <div>
         <h1>riscos-pppm — sessão de riscos</h1>
-        <p class="sub">Enquadrar → Identificar → Priorizar → Responder → Registrar. Método PPPM/BSBr + PMBOK. Nada sai da sua máquina.</p>
+        <p class="sub">Contexto → Riscos → Prioridade → Plano → Revisão. A IA externa prepara; você revisa e decide. Nada sai da sua máquina.</p>
       </div>
       <div class="topo-acoes">
         <span id="aviso-armazenamento" class="pilula pilula-aviso" hidden></span>
@@ -239,7 +239,7 @@ details[open]>summary{margin-bottom:.5rem}
         <li><b>A ferramenta não sabe do seu projeto.</b> Toda nota vem de quem preenche; ela não valida se a nota é honesta.</li>
         <li><b>A ferramenta não substitui</b> o plano de gerenciamento de riscos, nem a análise quantitativa, nem o monitoramento contínuo.</li>
         <li><b>Nenhum dado sai da máquina.</b> Não há servidor, conta, telemetria ou envio a modelo externo na superfície web.
-          O <em>modo assistido</em> (Etapas 2, 3 e 4) é copiar-e-colar: o prompt sai pela sua mão para o modelo que você escolher, e o que volta
+          A <em>IA por copiar-e-colar</em> (Etapas 2, 3 e 4) funciona com o modelo que você escolher: o prompt sai pela sua mão, e o que volta
           só entra no registro quando você aceita, item a item, com a origem marcada.</li>
       </ul>
     </section>
@@ -2227,11 +2227,11 @@ function dataBR(iso) {
    7. ETAPAS
    ===================================================================== */
 var ETAPAS = [
-  { n: 1, curto: 'Enquadrar',  titulo: 'Enquadrar — mapa inicial de oportunidades (registro de partes interessadas + declaração de escopo)' },
-  { n: 2, curto: 'Identificar', titulo: 'Identificar — ameaças e oportunidades (Identificar os Riscos)' },
-  { n: 3, curto: 'Priorizar',  titulo: 'Priorizar — Régua A · Probabilidade × Impacto (Realizar a Análise Qualitativa dos Riscos)' },
-  { n: 4, curto: 'Responder',  titulo: 'Responder — estratégias (Planejar as Respostas aos Riscos)' },
-  { n: 5, curto: 'Registrar',  titulo: 'Registrar — validação humana e exportação (governança / HITL)' }
+  { n: 1, curto: 'Contexto',   titulo: 'Contexto da sessão' },
+  { n: 2, curto: 'Riscos',     titulo: 'Identificar riscos' },
+  { n: 3, curto: 'Prioridade', titulo: 'Priorizar riscos' },
+  { n: 4, curto: 'Plano',      titulo: 'Planejar respostas' },
+  { n: 5, curto: 'Revisão',    titulo: 'Revisar e registrar' }
 ];
 
 function renderPassos() {
@@ -2475,33 +2475,35 @@ var respostaAssistente = '';   /* texto colado, só em memória: o que vale fica
 
 function renderAssistido(pol, tec) {
   var h = '<div class="bloco bloco-quieto" id="bloco-assistido">';
-  h += '<h3>Modo assistido <span class="pilula pilula-neutra">opcional · copiar e colar</span></h3>';
-  h += '<p><small>A página continua sem rede. Você leva o prompt ao modelo de IA da sua escolha, cola a resposta aqui, ' +
-    'e cada candidato entra no registro <b>só quando você aceitar</b> — sem ID antes disso, sem aceite em bloco. ' +
+  h += '<h3>2. Gerar riscos com IA <span class="pilula pilula-neutra">copiar e colar</span></h3>';
+  h += '<p><small>Use a técnica escolhida acima como lente: copie o prompt, cole no modelo de IA da sua escolha e traga a resposta. ' +
+    'Depois, revise cada candidato — ele só entra no registro quando você aprovar. ' +
     'O que você copiar sai da máquina pela sua mão; avalie o sigilo do enquadramento antes de colar em serviço externo.</small></p>';
 
   if (!tec) {
-    h += '<div class="nota nota-aviso"><p>Escolha uma técnica no catálogo acima: o prompt leva a <b>pergunta de disparo literal</b> dela.</p></div>';
+    h += '<div class="nota nota-aviso"><p><b>Primeiro, escolha uma técnica.</b> Ela é a lente que a IA usará para gerar os candidatos.</p></div>';
+  } else {
+    h += '<div class="nota nota-acc"><p><b>Lente em uso: ' + esc(tec.id) + ' ' + esc(tec.tecnica) + '.</b> A pergunta de disparo dela já vai no prompt.</p></div>';
   }
   h += '<div class="campo"><label for="contexto-assistido">Contexto adicional para o modelo <small>(opcional)</small></label>' +
     '<p class="dica">O que o enquadramento não diz: histórico, números, o que já aconteceu aqui. Entra no prompt como âncora e fica salvo na sessão (vale também na Etapa 3).</p>' +
     '<textarea id="contexto-assistido" rows="3" data-sessao="contextoAssistido" placeholder="ex.: a migração do portal em 2014 estourou a janela em 3 semanas">' + esc(estado.contextoAssistido) + '</textarea></div>';
   h += '<div class="acoes">' +
-    '<button type="button" class="btn' + (tec ? '' : ' btn-fantasma') + '" id="btn-prompt-copiar">Copiar prompt' + (tec ? ' (' + esc(tec.id) + ')' : '') + '</button>' +
-    '<button type="button" class="btn btn-fantasma" id="btn-prompt-ver" aria-expanded="false" aria-controls="prompt-assistido">Ver prompt</button>' +
+    '<button type="button" class="btn" id="btn-prompt-copiar"' + (tec ? '' : ' disabled') + '>1. Copiar prompt' + (tec ? ' · ' + esc(tec.id) : '') + '</button>' +
+    '<button type="button" class="btn btn-fantasma" id="btn-prompt-ver" aria-expanded="false" aria-controls="prompt-assistido"' + (tec ? '' : ' disabled') + '>Ver prompt</button>' +
     '<span id="status-prompt" aria-live="polite"></span></div>';
   h += '<textarea id="prompt-assistido" rows="14" readonly hidden aria-label="Prompt para o modelo de IA"></textarea>';
 
-  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-assistente">Cole a resposta do modelo</label>' +
+  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-assistente">2. Cole a resposta da IA</label>' +
     '<textarea id="resposta-assistente" rows="6" placeholder="' + esc(MARCADOR_RESPOSTA) + '\n### 1\ncausa: …\nevento: …\nefeito: …\nvem de: …"></textarea></div>';
-  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-sugestoes">Ler sugestões</button>' +
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-sugestoes">3. Revisar candidatos</button>' +
     '<span id="status-sugestoes" aria-live="polite"></span></div>';
 
   var lista = estado.sugestoes.map(function (s, i) { return { s: s, i: i }; })
     .filter(function (x) { return x.s.polaridade === pol; });
   if (lista.length) {
-    h += '<h3 style="margin-top:1.2rem">Sugestões aguardando decisão <span class="pilula pilula-aviso">' + lista.length + '</span></h3>';
-    h += '<p><small>Leia uma a uma. Edite o que quiser antes de aceitar — o registro marca se entrou como veio (<b>IA · aceito</b>) ou alterado (<b>IA · ajustado</b>).</small></p>';
+    h += '<h3 style="margin-top:1.2rem">4. Decida os candidatos <span class="pilula pilula-aviso">' + lista.length + '</span></h3>';
+    h += '<p><small>Aprove, edite e aprove, ou descarte. O registro marca se o texto foi aceito como veio ou ajustado por você.</small></p>';
     lista.forEach(function (x) {
       var s = x.s, i = x.i, tecS = tecnicaPorId(s.tecnica);
       var campo = function (rotulo, chave) {
@@ -2717,10 +2719,10 @@ function renderAssistidoNotas() {
   var lista = itensPriorizaveis();
   var pendentes = Object.keys(estado.sugestoesNota).filter(function (id) { return itemPorId(id); }).length;
   var h = '<div class="bloco bloco-quieto" id="bloco-assistido-notas">';
-  h += '<h3>Modo assistido <span class="pilula pilula-neutra">opcional · copiar e colar</span>' +
+  h += '<h3>Gerar sugestões de prioridade com IA <span class="pilula pilula-neutra">copiar e colar</span>' +
     (pendentes ? ' <span class="pilula pilula-aviso">' + pendentes + ' sugest' + (pendentes > 1 ? 'ões' : 'ão') + ' aguardando</span>' : '') + '</h3>';
-  h += '<p><small>O prompt leva o enquadramento, as escalas literais do método e os itens; o modelo devolve <b>nota sugerida com critério e âncora</b> (ou “?” onde não há) — ' +
-    'e nada entra até você clicar <b>Usar estas notas</b> no item, onde ainda pode mudar. Qualidade do dado o modelo não sugere: é você quem responde “de onde vem esse número?”. ' +
+  h += '<p><small>1. Copie o prompt. 2. Cole-o no seu modelo de IA. 3. Traga a resposta para revisar abaixo. O modelo devolve <b>notas sugeridas com critério e âncora</b> (ou “?” onde não há). ' +
+    'Nada é aplicado até você usar a sugestão no item. A qualidade do dado continua sendo sua decisão. ' +
     'Severidade e faixa continuam calculadas aqui.</small></p>';
   if (!lista.length) {
     h += '<div class="nota nota-aviso"><p>Nenhum item priorizável ainda — o prompt precisa de enunciados completos.</p></div>';
@@ -2730,13 +2732,13 @@ function renderAssistidoNotas() {
     'Quando o modelo devolver “?” perguntando algo, responda aqui e copie o prompt de novo. Fica salvo na sessão.</p>' +
     '<textarea id="contexto-assistido" rows="3" data-sessao="contextoAssistido" placeholder="ex.: a migração do portal em 2014 estourou a janela em 3 semanas; o contrato prevê multa por dia de atraso após 1º/dez">' + esc(estado.contextoAssistido) + '</textarea></div>';
   h += '<div class="acoes">' +
-    '<button type="button" class="btn' + (lista.length ? '' : ' btn-fantasma') + '" id="btn-prompt-notas-copiar"' + (lista.length ? '' : ' disabled') + '>Copiar prompt (' + lista.length + ' itens)</button>' +
+    '<button type="button" class="btn" id="btn-prompt-notas-copiar"' + (lista.length ? '' : ' disabled') + '>1. Copiar prompt (' + lista.length + ' itens)</button>' +
     '<button type="button" class="btn btn-fantasma" id="btn-prompt-notas-ver" aria-expanded="false" aria-controls="prompt-notas"' + (lista.length ? '' : ' disabled') + '>Ver prompt</button>' +
     '<span id="status-prompt-notas" aria-live="polite"></span></div>';
   h += '<textarea id="prompt-notas" rows="14" readonly hidden aria-label="Prompt para o modelo de IA"></textarea>';
-  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-notas">Cole a resposta do modelo</label>' +
+  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-notas">2. Cole a resposta da IA</label>' +
     '<textarea id="resposta-notas" rows="6" placeholder="' + esc(MARCADOR_NOTAS) + '\n### R001\nP: 4 — &quot;critério&quot; — vem de: &quot;trecho&quot; (coluna)\nI prazo: …\nI custo: …\nI escopo: …\ndado sensível: sim/não — …"></textarea></div>';
-  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-notas">Ler sugestões</button>' +
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-notas">3. Revisar sugestões</button>' +
     '<span id="status-notas" aria-live="polite"></span></div>';
   h += '</div>';
   return h;
@@ -2989,10 +2991,10 @@ function renderAssistidoRespostas() {
   var lista = itensParaResponder();
   var pendentes = Object.keys(estado.sugestoesResposta).filter(function (id) { return itemPorId(id); }).length;
   var h = '<div class="bloco bloco-quieto" id="bloco-assistido-respostas">';
-  h += '<h3>Modo assistido <span class="pilula pilula-neutra">opcional · copiar e colar</span>' +
+  h += '<h3>Gerar respostas com IA <span class="pilula pilula-neutra">copiar e colar</span>' +
     (pendentes ? ' <span class="pilula pilula-aviso">' + pendentes + ' sugest' + (pendentes > 1 ? 'ões' : 'ão') + ' aguardando</span>' : '') + '</h3>';
-  h += '<p><small>O prompt leva o enquadramento, as dez estratégias com a pergunta de escolha, as regras dos campos e os itens priorizados; o modelo devolve <b>estratégia pela pergunta de escolha, ação, gatilho, risco residual e “o que essa ação pode causar?”</b> — com ⟨até quando?⟩ onde falta dado. ' +
-    'Nada entra até você clicar <b>Usar esta resposta</b> no item. O modelo <b>nunca sugere dono</b> nem confirma gatilho de validação humana: os dois continuam só com você, no cartão.</small></p>';
+  h += '<p><small>1. Copie o prompt. 2. Cole-o no seu modelo de IA. 3. Traga a resposta para revisar. O modelo devolve <b>estratégia, ação, gatilho, risco residual e o possível risco secundário</b>. ' +
+    'Nada entra até você usar a sugestão no item. O modelo <b>nunca sugere dono</b> nem confirma gatilho de validação humana: os dois continuam só com você.</small></p>';
   if (!lista.length) {
     h += '<div class="nota nota-aviso"><p>Nenhum item priorizado ainda — o prompt precisa de itens com Probabilidade e Impacto (Etapa 3).</p></div>';
   }
@@ -3000,13 +3002,13 @@ function renderAssistidoRespostas() {
     '<p class="dica">O que sustenta uma resposta e o enquadramento não diz: orçamento, prazos, contratos, o que já foi tentado. Fica salvo na sessão (é o mesmo campo das Etapas 2 e 3).</p>' +
     '<textarea id="contexto-assistido" rows="3" data-sessao="contextoAssistido" placeholder="ex.: há verba para um segundo integrador até setembro; o contrato com o fornecedor permite multa por atraso">' + esc(estado.contextoAssistido) + '</textarea></div>';
   h += '<div class="acoes">' +
-    '<button type="button" class="btn' + (lista.length ? '' : ' btn-fantasma') + '" id="btn-prompt-resp-copiar"' + (lista.length ? '' : ' disabled') + '>Copiar prompt (' + lista.length + ' itens)</button>' +
+    '<button type="button" class="btn" id="btn-prompt-resp-copiar"' + (lista.length ? '' : ' disabled') + '>1. Copiar prompt (' + lista.length + ' itens)</button>' +
     '<button type="button" class="btn btn-fantasma" id="btn-prompt-resp-ver" aria-expanded="false" aria-controls="prompt-respostas"' + (lista.length ? '' : ' disabled') + '>Ver prompt</button>' +
     '<span id="status-prompt-resp" aria-live="polite"></span></div>';
   h += '<textarea id="prompt-respostas" rows="14" readonly hidden aria-label="Prompt para o modelo de IA"></textarea>';
-  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-respostas">Cole a resposta do modelo</label>' +
+  h += '<div class="campo" style="margin-top:1rem"><label for="resposta-respostas">2. Cole a resposta da IA</label>' +
     '<textarea id="resposta-respostas" rows="6" placeholder="' + esc(MARCADOR_RESPOSTAS) + '\n### R001\nestratégia: Mitigar — &quot;pergunta de escolha&quot;: porque …\nação: …\ngatilho: …\nresidual: …\nrisco secundário: … — faixa estimada: médio"></textarea></div>';
-  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-respostas">Ler sugestões</button>' +
+  h += '<div class="acoes"><button type="button" class="btn" id="btn-ler-respostas">3. Revisar sugestões</button>' +
     '<span id="status-respostas" aria-live="polite"></span></div>';
   h += '</div>';
   return h;
@@ -3074,8 +3076,14 @@ function renderDecisaoSugerida(it) {
 function renderEtapa2() {
   var pol = estado.abaIdentificar;
   var h = cabeca(2) +
-    '<p>Faça a pergunta de disparo <b>literalmente</b> — ela é concreta de propósito. Insista: a primeira resposta é sempre a óbvia. ' +
-    'Combine de 2 a 4 técnicas de ângulos diferentes; uma só produz um ponto cego previsível.</p></div>';
+    '<p>A técnica é a lente para a IA encontrar riscos; o resultado são candidatos que você aprova, ajusta ou descarta. ' +
+    'Use o preenchimento manual apenas quando preferir escrever um risco do zero.</p></div>';
+
+  var disponiveis = tecnicasDe(pol);
+  if (!disponiveis.some(function (t) { return t.id === estado.novo.tecnica; })) {
+    estado.novo.tecnica = estado.tecnicaAtiva[pol] || '';
+  }
+  var tec = tecnicaPorId(estado.tecnicaAtiva[pol]);
 
   /* As duas abas desenham no MESMO painel, então as duas apontam para ele em
      aria-controls. tabindex móvel: só a aba ativa entra na ordem de tabulação. */
@@ -3096,7 +3104,8 @@ function renderEtapa2() {
   }
 
   h += '<div class="bloco">';
-  h += '<h3>Catálogo de técnicas (Identificar os Riscos)</h3>';
+  h += '<h3>1. Escolha uma lente para a IA</h3>';
+  h += '<p class="dica">A técnica orienta a pergunta que vai no prompt; não é uma etapa adicional. Você pode trocar a lente antes de copiar o prompt.</p>';
   h += '<label class="check"><input type="checkbox" id="filtro-esforco"' + (estado.soEsforcoBaixo ? ' checked' : '') + '>' +
     '<span>Só técnicas de <b>esforço baixo</b> — a pré-seleção da sessão de 15 minutos</span></label>';
 
@@ -3118,7 +3127,7 @@ function renderEtapa2() {
         '<dt>Serve para</dt><dd>' + esc(t.serve_para.split('|').join(' · ')) + '</dd>' +
         '</dl>' +
         '<div class="acoes"><button type="button" class="btn btn-mini' + (ativa ? '' : ' btn-fantasma') +
-        '" data-usar-tecnica="' + esc(t.id) + '">' + (ativa ? 'Técnica em uso' : 'Usar esta técnica') + '</button></div>' +
+        '" data-usar-tecnica="' + esc(t.id) + '">' + (ativa ? 'Lente em uso' : 'Usar como lente') + '</button></div>' +
         '</article>';
     });
     h += '</div>';
@@ -3130,23 +3139,14 @@ function renderEtapa2() {
     '</tbody></table></div></details>';
   h += '</div>';
 
-  /* formulário de enunciado */
-  var tec = tecnicaPorId(estado.tecnicaAtiva[pol]);
-  h += '<div class="bloco">';
-  h += '<h3>Enunciar o risco</h3>';
+  h += renderAssistido(pol, tec);
+
+  h += '<details class="bloco"><summary>Adicionar um risco manualmente</summary>';
+  h += '<p class="dica">Alternativa à geração por IA. Use o mesmo formato para que o risco possa seguir para a priorização.</p>';
   h += '<div class="nota"><p><b>Devido a</b> ⟨causa — um fato conhecido⟩, <b>pode ocorrer</b> ⟨evento incerto⟩, ' +
     '<b>o que levaria a</b> ⟨efeito no objetivo⟩.</p>' +
-    '<p><small>A causa é onde a resposta preventiva age; o efeito é o que alimenta o Impacto na priorização. ' +
-    'Por isso os três campos são separados.</small></p></div>';
-  if (tec) {
-    h += '<div class="nota nota-acc"><p><b>Pergunta de disparo em uso — ' + esc(tec.id) + ' ' + esc(tec.tecnica) + ':</b><br>' +
-      esc(tec.pergunta_disparo) + '</p></div>';
-  }
-  var disponiveis = tecnicasDe(pol);
-  if (!disponiveis.some(function (t) { return t.id === estado.novo.tecnica; })) {
-    estado.novo.tecnica = estado.tecnicaAtiva[pol] || '';
-  }
-  h += '<div class="campo"><label for="novo-tecnica">Técnica aplicada</label>' +
+    '<p><small>A causa orienta a prevenção; o efeito orienta o Impacto. Por isso os três campos são separados.</small></p></div>';
+  h += '<div class="campo"><label for="novo-tecnica">Lente aplicada</label>' +
     '<select id="novo-tecnica" data-novo="tecnica">' +
     opcoes(disponiveis.map(function (t) { return { valor: t.id, rotulo: t.id + ' · ' + t.tecnica + ' (' + t.origem_pmbok + ')' }; }),
            estado.novo.tecnica, '— sem técnica registrada —') + '</select></div>';
@@ -3159,13 +3159,9 @@ function renderEtapa2() {
   h += '<div class="derivado" id="novo-status" aria-live="polite"></div>';
   h += '<div class="acoes"><button type="button" class="btn" id="btn-adicionar">Adicionar ao registro</button>' +
     '<small class="acoes-fim">Campos incompletos entram como rascunho — registrar é permitido, priorizar não.</small></div>';
-
   h += '<details><summary>Como não escorregar</summary><ul>' +
     NAO_ESCORREGAR.map(function (r) { return '<li><b>' + esc(r[0]) + '.</b> ' + esc(r[1]) + '</li>'; }).join('') +
-    '</ul></details>';
-  h += '</div>';
-
-  h += renderAssistido(pol, tec);
+    '</ul></details></details>';
 
   /* itens já registrados */
   h += '<div class="bloco"><h3>Itens registrados <span class="pilula pilula-neutra">' + estado.itens.length + '</span></h3>';
@@ -3232,8 +3228,7 @@ function renderCartaoI2(it) {
 /* --- Etapa 3: Priorizar (Régua A). A Régua B NÃO aparece nesta tela. --- */
 function renderEtapa3() {
   var h = cabeca(3) +
-    '<p>Régua A prioriza <b>riscos</b> e responde “qual risco olhar primeiro?”. Preencha o Impacto ' +
-    '<b>por dimensão</b> e o método usa a maior nota: um risco de prazo 2 mas custo 5 é um risco 5.</p></div>';
+    '<p>A IA pode sugerir as notas com base no seu contexto. Você revisa a evidência, aplica ou ajusta a sugestão e informa a qualidade do dado.</p></div>';
 
   h += '<div class="nota nota-acc"><p><b>Só a Régua A nesta tela.</b> A Régua B (fórmula da Aula 2) prioriza iniciativas e respostas, ' +
     'não riscos — ela vive na Etapa 4, em bloco próprio. Confundir as duas é o erro conceitual mais comum em matriz de risco, ' +
@@ -3245,7 +3240,8 @@ function renderEtapa3() {
   h += renderAssistidoNotas();
 
   h += '<div class="bloco">';
-  h += '<h3>Riscos priorizáveis <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  h += '<h3>Revisar prioridades <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  h += '<p class="dica">Use a sugestão da IA no cartão quando ela estiver disponível; os campos também permitem corrigir uma nota ou completar o que ficou sem base.</p>';
   if (!priorizaveis.length) {
     h += '<p class="vazio">Nenhum item com enunciado completo. Volte à Etapa 2 e complete causa, evento e efeito.</p>';
   } else {
@@ -3350,8 +3346,7 @@ function tabelasReguaA() {
 /* --- Etapa 4: Responder. Duas abas mutuamente exclusivas: nunca A e B na mesma tela. --- */
 function renderEtapa4() {
   var h = cabeca(4) +
-    '<p>Cinco estratégias para ameaças, cinco espelhadas para oportunidades. Uma resposta sem os cinco campos obrigatórios ' +
-    'não é uma resposta — é uma intenção.</p></div>';
+    '<p>A IA pode preparar uma estratégia e os campos da resposta. Você revisa, informa o dono e confirma os pontos de validação humana.</p></div>';
 
   var abaR = estado.abaResponder;
   h += '<div class="abas" role="tablist" aria-label="Régua em uso">' +
@@ -3374,7 +3369,8 @@ function painelRespostas() {
     'A Régua B fica na outra aba, e as duas nunca aparecem juntas nem são somadas.</p></div>';
   h += renderAssistidoRespostas();
   h += '<div class="bloco">';
-  h += '<h3>Respostas <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  h += '<h3>Revisar respostas <span class="pilula pilula-neutra">' + priorizaveis.length + '</span></h3>';
+  h += '<p class="dica">Use a sugestão da IA no cartão quando ela estiver disponível. Dono e confirmações de validação humana sempre são definidos por você.</p>';
   if (!priorizaveis.length) {
     h += '<p class="vazio">Nenhum item priorizável ainda. Volte à Etapa 2 para completar enunciados, ou à Etapa 3 para pontuar.</p>';
   } else {
